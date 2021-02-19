@@ -276,6 +276,7 @@ def randomforest_crosscopy1(posX,negX,data):
 
 
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
+#data資料夾位置的根目錄
 #os.chdir("")
 foldername="pbmc3k"## datafolder
 resultfolder="preservation_result"
