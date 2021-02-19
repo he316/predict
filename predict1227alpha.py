@@ -276,17 +276,18 @@ def randomforest_crosscopy1(posX,negX,data):
 
 
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
-foldername="pbmc3k"
-
+#os.chdir("")
+foldername="pbmc3k"## datafolder
+resultfolder="preservation_result"
 savedir="./"+foldername+"/Leiden_cluster_"
 Leiden_clustering_size = pd.read_csv("./"+foldername+"/Leiden_clustering_size.csv")
 cell_data = pd.read_csv("./"+foldername+"/preprocessed_cell.csv",index_col=0)
 cell_UMAP_cluster = pd.read_csv("./"+foldername+"/UMAP_cell_embeddings_to_leiden_clusters_and_coordinates.csv",index_col=0)
+result_savedir="./"+foldername+"/"+resultfolder+"/"
 try:
-    os.mkdir("./"+foldername+"/preservation_result/",755)
+    os.mkdir(result_savedir,755)
 except:
     pass
-result_savedir="./"+foldername+"/preservation_result/"
 
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
 for i, label in enumerate(range(0,len(Leiden_clustering_size.index))):
@@ -301,7 +302,7 @@ for i, label in enumerate(range(0,len(Leiden_clustering_size.index))):
                          verticalalignment='center',
                          size=11,
                          )
-plt.savefig("./"+foldername+"/preservation_result/clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
+plt.savefig(result_savedir+"clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
             
             
 #loop區域,尋找可以測試的組合,並建立資料夾
@@ -364,13 +365,9 @@ for i in training_group_DF.index:
         if (filtered_edges.weight[i] >= (filtered_edges.weight.max()/2)) :#權重在這裡
             target_Module_c_list.add(filtered_edges.fromNode[i])
             target_Module_c_list.add(filtered_edges.toNode[i])
-            
-    ####02/09改動:
     target_Module_c_list=list(target_Module_c_list)
     del(edges,filtered_edges)
-    #target_Module_c = pd.read_csv(savedir+str(POS_cluster)+'/modules/'+moduleColor+'_node.csv')
-    #target_Module_c_list = target_Module_c['name'].tolist()#篩選module中連結度比較緊密的基因,可能可以透過degree篩選之類的
-    
+        
     if len(POS.index) >= len(NEG.index):
         min_sample_count=len(NEG.index)
     else:
@@ -378,7 +375,7 @@ for i in training_group_DF.index:
 
     POS_training=POS.sample(n=min_sample_count, axis=0)
     NEG_training=NEG.sample(n=min_sample_count, axis=0)
-
+                                #第一個引數輸入要訓練的feature
     result = predict_packagecopy1(target_Module_genes,POS_training,NEG_training, cell_data, cell_UMAP_cluster, #cell data, after preprocessing!!
                                                            list(range(0,len(Module_cluster_Zscore.index))), 
                                                            list(Module_cluster_Zscore[moduleColor]),
