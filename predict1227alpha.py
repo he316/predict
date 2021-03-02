@@ -279,9 +279,10 @@ def randomforest_crosscopy1(posX,negX,data):
 #data資料夾位置的根目錄
 #os.chdir("")
 foldername="pbmc3k"## datafolder
+Clustermethod="Leiden"
 resultfolder="preservation_result"
-savedir="./"+foldername+"/Leiden_cluster_"
-Leiden_clustering_size = pd.read_csv("./"+foldername+"/Leiden_clustering_size.csv")
+savedir="./"+foldername+"/"+Clustermethod+"_cluster_"
+clustering_size = pd.read_csv("./"+foldername+"/"+Clustermethod+"_clustering_size.csv")
 cell_data = pd.read_csv("./"+foldername+"/preprocessed_cell.csv",index_col=0)
 cell_UMAP_cluster = pd.read_csv("./"+foldername+"/UMAP_cell_embeddings_to_leiden_clusters_and_coordinates.csv",index_col=0)
 result_savedir="./"+foldername+"/"+resultfolder+"/"
@@ -291,7 +292,7 @@ except:
     pass
 
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
-for i, label in enumerate(range(0,len(Leiden_clustering_size.index))):
+for i, label in enumerate(range(0,len(clustering_size.index))):
         
     #loop through data points and plot each point 
         for l, row in cell_UMAP_cluster.loc[cell_UMAP_cluster['leiden']==label,:].iterrows():
@@ -308,24 +309,27 @@ plt.savefig(result_savedir+"clustering_UMAP.png", bbox_inches='tight',pad_inches
             
 #loop區域,尋找可以測試的組合,並建立資料夾
 training_group_DF=pd.DataFrame(columns=['POS','NEG','Color','moduleName'])
-for POS_cluster in range(0,len(Leiden_clustering_size.index)):
-    Module_cluster_Zscore = pd.read_csv(savedir+str(POS_cluster)+'/module_preservation_Zscore.csv',index_col=0)
-    Module_cluster_Zscore = Module_cluster_Zscore.drop(columns=['gold', 'grey'])
-    # module_preservation_Zscore:所有module在所有cluster的Zscore
-    if len(Module_cluster_Zscore.columns)>0 :
-        for moduleColor in Module_cluster_Zscore.columns:
-            #每個module
-            if Module_cluster_Zscore[moduleColor][POS_cluster]>10:
-                for NEG_cluster in range(0,len(Leiden_clustering_size.index)):
-                    if POS_cluster!=NEG_cluster:
-                        if Module_cluster_Zscore[moduleColor][NEG_cluster]<2:
-                            try:
-                                #os.mkdir(savedir+str(POS_cluster)+"/modules/PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor+"/",755)
-                                os.mkdir(result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor+"/",755)                            
-                            except:
-                                pass
-                            print('找到測試組!:\nPOS:cluster'+str(POS_cluster)+'\n'+'NEG:cluster'+str(NEG_cluster)+'\n'+'module:'+moduleColor+'\n')
-                            training_group_DF.loc[len(training_group_DF.index)]=[POS_cluster,NEG_cluster,moduleColor,'cluster'+str(POS_cluster)+'_'+moduleColor]
+for POS_cluster in range(0,len(clustering_size.index)):
+    try:
+        Module_cluster_Zscore = pd.read_csv(savedir+str(POS_cluster)+'/module_preservation_Zscore.csv',index_col=0)
+        Module_cluster_Zscore = Module_cluster_Zscore.drop(columns=['gold', 'grey'])
+        # module_preservation_Zscore:所有module在所有cluster的Zscore
+        if len(Module_cluster_Zscore.columns)>0 :
+            for moduleColor in Module_cluster_Zscore.columns:
+                #每個module
+                if Module_cluster_Zscore[moduleColor][POS_cluster]>10:
+                    for NEG_cluster in range(0,len(clustering_size.index)):
+                        if POS_cluster!=NEG_cluster:
+                            if Module_cluster_Zscore[moduleColor][NEG_cluster]<2:
+                                try:
+                                    #os.mkdir(savedir+str(POS_cluster)+"/modules/PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor+"/",755)
+                                    os.mkdir(result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor+"/",755)                            
+                                except:
+                                    pass
+                                print('找到測試組!:\nPOS:cluster'+str(POS_cluster)+'\n'+'NEG:cluster'+str(NEG_cluster)+'\n'+'module:'+moduleColor+'\n')
+                                training_group_DF.loc[len(training_group_DF.index)]=[POS_cluster,NEG_cluster,moduleColor,'cluster'+str(POS_cluster)+'_'+moduleColor]
+    except: 
+        pass
 #作圖loop區域,前段 #提醒! 要再加入後續的做圖code
 ACC_mean_std_DF=pd.DataFrame(columns=['mean','std'])
 for i in training_group_DF.index:
