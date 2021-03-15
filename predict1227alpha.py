@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 ## weight: weight of edge /2
-##training: feature genes
+##training: module genes
 #pbmc3k
+
+
 """
 
 import os
@@ -194,7 +196,7 @@ def count_number(cluster_number, preservation_Z_score, cell_cluster):
     #才能計算positive率
     for cell_count in range(0,len(cell_cluster)):        
         #第cell_count個細胞的'leiden'存的是cluster,所以要比較一次
-        if cell_cluster['leiden'][cell_count]== cluster_number:
+        if cell_cluster[cell_cluster.columns[0]][cell_count]== cluster_number:
             all_num+=1
             if preservation_Z_score[cell_count] == 1:#是positive的次數
                 pos_num+=1
@@ -255,7 +257,7 @@ def predict_packagecopy1(module_gene_list, pos_sample, neg_sample, cell_data, ce
     return result
 
 ### 在 predictpackage裡面 #randomforest
-def randomforest_crosscopy1(posX,negX,data):    
+def randomforest_crosscopy1(posX,negX,data):
     train_X = posX+negX
     train_Y = [1]*len(posX)+[0]*len(negX)
         
@@ -278,27 +280,28 @@ def randomforest_crosscopy1(posX,negX,data):
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
 #data資料夾位置的根目錄
 #os.chdir("")
-foldername="pbmc3k"## datafolder
-Clustermethod="Leiden"
+foldername="scv_pancrease"## datafolder
+Clustermethod="celltype"
+clustering="clusters2num"
 resultfolder="preservation_result"
 savedir="./"+foldername+"/"+Clustermethod+"_cluster_"
 clustering_size = pd.read_csv("./"+foldername+"/"+Clustermethod+"_clustering_size.csv")
 cell_data = pd.read_csv("./"+foldername+"/preprocessed_cell.csv",index_col=0)
-cell_UMAP_cluster = pd.read_csv("./"+foldername+"/UMAP_cell_embeddings_to_leiden_clusters_and_coordinates.csv",index_col=0)
+cell_UMAP_cluster = pd.read_csv("./"+foldername+"/UMAP_cell_embeddings_to_"+Clustermethod+"_clusters_and_coordinates.csv",index_col=0)
 result_savedir="./"+foldername+"/"+resultfolder+"/"
 try:
     os.mkdir(result_savedir,755)
 except:
     pass
 
-sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
+sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue=clustering,fit_reg=False, legend=True, legend_out=True,size=14)
 for i, label in enumerate(range(0,len(clustering_size.index))):
         
     #loop through data points and plot each point 
-        for l, row in cell_UMAP_cluster.loc[cell_UMAP_cluster['leiden']==label,:].iterrows():
+        for l, row in cell_UMAP_cluster.loc[cell_UMAP_cluster[clustering]==label,:].iterrows():
         
             #add the data point as text
-            plt.annotate(str(row['leiden']), 
+            plt.annotate(row[clustering], 
                          (row['UMAP1'], row['UMAP2']),
                          horizontalalignment='center',
                          verticalalignment='center',
@@ -348,7 +351,7 @@ for i in training_group_DF.index:
     target_Module=pd.read_csv(savedir+str(POS_cluster)+'/modules/'+moduleColor+'.csv',index_col=0)
     target_Module_genes=list(target_Module.index)
     target_module_genes_set= set(target_Module_genes)
-    edges = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'edges.txt')
+    edges = pd.read_table(savedir+str(POS_cluster)+'/modules/'+Clustermethod+'_cluster_'+str(POS_cluster)+'edges.txt')
     
     
     #nodes = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'nodes.txt')
@@ -393,9 +396,9 @@ for i in training_group_DF.index:
     #作圖loop區域,後續的圖
     pos_cluster_neg_cluster_cell_list=[]
     for i in range(len(cell_UMAP_cluster)):
-        if cell_UMAP_cluster['leiden'][i] == POS_cluster:
+        if cell_UMAP_cluster[clustering][i] == POS_cluster:
             pos_cluster_neg_cluster_cell_list.append('positive_cluster_'+str(POS_cluster))
-        elif cell_UMAP_cluster['leiden'][i] == NEG_cluster:
+        elif cell_UMAP_cluster[clustering][i] == NEG_cluster:
             pos_cluster_neg_cluster_cell_list.append('negative_cluster_'+str(NEG_cluster))
         else:
             pos_cluster_neg_cluster_cell_list.append('other')
@@ -427,8 +430,8 @@ for i in training_group_DF.index:
     NEG_moduleGeneOrdered=NEG_training[target_Module_genes]
     NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
     
-    plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/40)))
-    moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False)
+    plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/40)),dpi=100)
+    moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
     plt.savefig(module_savedir+'/neg_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)    
     
     
@@ -445,7 +448,7 @@ for i in training_group_DF.index:
     NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
     
     plt.figure(figsize=((10+16*len(target_Module_c_list)/40),(10+9*len(target_Module_c_list)/40)))
-    moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False)
+    moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
     plt.savefig(module_savedir+'/neg_feature_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
     
     #訓練資料
