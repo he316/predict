@@ -3,8 +3,6 @@
 ## weight: weight of edge /2
 ##training: module genes
 #pbmc3k
-
-
 """
 
 import os
@@ -274,7 +272,21 @@ def randomforest_crosscopy1(posX,negX,data):
 #    print (clf.score(train_X, train_Y))
     return  result
 
-
+def drawlmplot_annotation(pltdata,cluster,Xaxis,Yaxis,Hue,savepath):
+    sns.lmplot(data=pltdata, x=Xaxis, y=Yaxis, hue=Hue,fit_reg=False, legend=True, legend_out=True,size=14)
+    for i, label in enumerate(range(0,len(cluster))):
+            
+        #loop through data points and plot each point 
+            for l, row in pltdata.loc[pltdata[Hue]==label,:].iterrows():
+            
+                #add the data point as text
+                plt.annotate(int(row[Hue]), 
+                             (row[Xaxis], row[Yaxis]),
+                             horizontalalignment='center',
+                             verticalalignment='center',
+                             size=11,
+                             )
+    plt.savefig(savepath, bbox_inches='tight',pad_inches=0.0)
 
 
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
@@ -294,19 +306,10 @@ try:
 except:
     pass
 
+drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clustering,
+                      result_savedir+"clustering_UMAP_annotation.png")
+
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue=clustering,fit_reg=False, legend=True, legend_out=True,size=14)
-for i, label in enumerate(range(0,len(clustering_size.index))):
-        
-    #loop through data points and plot each point 
-        for l, row in cell_UMAP_cluster.loc[cell_UMAP_cluster[clustering]==label,:].iterrows():
-        
-            #add the data point as text
-            plt.annotate(row[clustering], 
-                         (row['UMAP1'], row['UMAP2']),
-                         horizontalalignment='center',
-                         verticalalignment='center',
-                         size=11,
-                         )
 plt.savefig(result_savedir+"clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
             
             
@@ -404,7 +407,7 @@ for i in training_group_DF.index:
             pos_cluster_neg_cluster_cell_list.append('other')
     
     cell_UMAP_cluster['training_clusters']=pos_cluster_neg_cluster_cell_list
-    
+        
     sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='training_clusters',fit_reg=False, legend=True, legend_out=True,size=14)
     plt.savefig(module_savedir+'/training_cluster_UMAP.png', bbox_inches='tight',pad_inches=0.0)
     
@@ -447,7 +450,7 @@ for i in training_group_DF.index:
     NEG_moduleGeneOrdered=NEG_training[target_Module_c_list]
     NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
     
-    plt.figure(figsize=((10+16*len(target_Module_c_list)/40),(10+9*len(target_Module_c_list)/40)))
+    plt.figure(figsize=((10+16*len(target_Module_c_list)/40),(10+9*len(target_Module_c_list)/40)),dpi=100)
     moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
     plt.savefig(module_savedir+'/neg_feature_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
     
