@@ -287,11 +287,87 @@ def drawlmplot_annotation(pltdata,cluster,Xaxis,Yaxis,Hue,savepath):
                              size=11,
                              )
     plt.savefig(savepath, bbox_inches='tight',pad_inches=0.0)
+def positive_rate(Cluster,Predictlist,cell_UMAP):
+    pr=[]
+    for i in Cluster:
+        num = count_number(i, Predictlist, cell_UMAP) #由於在count_number中指定傳入的dataframe的第一行為cluster,所以只能用另一個dataframe
+        pri = num[0]/num[1]
+        pr.append(pri)
+    return pr
 
-
+def find_boundary_cluster(cell_UMAP_cluster,Predictlist,Cluster):
+    pr=positive_rate(Cluster, Predictlist, cell_UMAP_cluster)
+    bdc=[]
+    for index,element in enumerate(pr):
+        if element<0.9 and element>0.1:
+            bdc.append(index)
+    return bdc
+def predict_packagecopy2(module_gene_list, pos_sample, neg_sample, cell_data,
+                         cell_cluster, Cluster,#細胞對應cluster,Cluster列表
+                         preservation_Z_score, modulename, save_name_255,
+                         cell_leiden_UMAP_cluster,cell_leiden_cluster,#
+                         save_name_barplot):
+    pos_m = pos_sample[module_gene_list]
+    neg_m = neg_sample[module_gene_list]
+    train_pos = pos_m.values.tolist()
+    train_neg = neg_m.values.tolist()
+    data_rd = cell_data[module_gene_list]
+    data_X = data_rd.values.tolist()
+    result = randomforest_crosscopy1(train_pos, train_neg, data_X)
+    
+    #算所有cluster的pos率
+    pr=positive_rate(Cluster,result['predict_list'],cell_cluster)
+    
+    pltdata={"preservation_Z_score": preservation_Z_score,
+            "positive_rate":pr,
+            "Cluster":Cluster}
+    #print( predict_list)
+    #print(positive_rate)
+    #print(Cluster)
+    pltdata=pd.DataFrame(pltdata)
+    ## pd.dataframe
+    pltdata["ClusterStr"]=list(map(str, pltdata["Cluster"]))
+    sns.lmplot(data=pltdata,x='preservation_Z_score', y='positive_rate', hue='Cluster',
+                   fit_reg=False, legend=True, legend_out=True,size=9)
+    plt.title(modulename+" Accuracy: %0.2f (+/- %0.2f)" % (result['ACC_mean_std'][0], result['ACC_mean_std'][1] * 2), fontsize=16)
+    for i, label in enumerate(Cluster):
+        
+    #loop through data points and plot each point 
+        for l, row in pltdata.loc[pltdata['Cluster']==label,:].iterrows():
+        
+            #add the data point as text
+            plt.annotate(str(row['ClusterStr']), 
+                         (row['preservation_Z_score'], row['positive_rate']),
+                         horizontalalignment='center',
+                         verticalalignment='center',
+                         size=11,
+                         )
+    
+    plt.savefig(save_name_255,bbox_inches='tight',               # 去除座標軸占用的空間
+                pad_inches=0.0)
+    ##回傳值已改成dictionary,一個裝 predict_list,另一個裝ACC的mean跟std
+    #後面需要num_list
+    #predict_list會標註說哪一些細胞被判斷成positive,哪一些細胞被判斷成negtive,
+    #copy1 ver:num_list已經改成positive_rate
+    #          preservation_255_list已經改成 preservation_Z_score
+    #
+    
+    pr = positive_rate(cell_leiden_cluster,result['predict_list'],cell_leiden_UMAP_cluster)
+        
+    pltdata={"positive_rate":pr,
+        "Cluster":cell_leiden_cluster}    
+    plt.figure(figsize=(10,6))
+    splot = sns.barplot(data=pltdata, x = 'Cluster', y = 'positive_rate', ci = None)
+    for p in splot.patches:
+        splot.annotate(format(p.get_height(), '.2f'), (p.get_x() + p.get_width() / 2., p.get_height()), ha = 'center', va = 'center', xytext = (0, 10), textcoords = 'offset points')
+    plt.xlabel("Clusters", size=14)
+    plt.ylabel("Positive_Rate", size=14)
+    plt.savefig(save_name_barplot,bbox_inches='tight',               # 去除座標軸占用的空間
+                pad_inches=0.0)
+    return result
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
 #data資料夾位置的根目錄
-#os.chdir("")
+os.chdir("C:/Users/user/Desktop/test/scanpy")
 foldername="scv_pancrease"## datafolder
 Clustermethod="celltype"
 clustering="clusters2num"
@@ -301,6 +377,9 @@ clustering_size = pd.read_csv("./"+foldername+"/"+Clustermethod+"_clustering_siz
 cell_data = pd.read_csv("./"+foldername+"/preprocessed_cell.csv",index_col=0)
 cell_UMAP_cluster = pd.read_csv("./"+foldername+"/UMAP_cell_embeddings_to_"+Clustermethod+"_clusters_and_coordinates.csv",index_col=0)
 result_savedir="./"+foldername+"/"+resultfolder+"/"
+cell_leiden_UMAP_cluster = pd.read_csv("./"+foldername+"_leiden2/UMAP_cell_embeddings_to_leiden_clusters_and_coordinates.csv",index_col=0)
+cell_UMAP_cluster['leiden']=cell_leiden_UMAP_cluster['leiden']
+cell_leiden_cluster=list(set(cell_UMAP_cluster['leiden']))
 try:
     os.mkdir(result_savedir,755)
 except:
@@ -311,7 +390,11 @@ drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clus
 
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue=clustering,fit_reg=False, legend=True, legend_out=True,size=14)
 plt.savefig(result_savedir+"clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
-            
+drawlmplot_annotation(cell_leiden_UMAP_cluster, cell_leiden_cluster, 'UMAP1', 'UMAP2', 'leiden',
+                      result_savedir+"leiden_res2_clustering_UMAP_annotation.png")
+
+sns.lmplot(data=cell_leiden_UMAP_cluster, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
+plt.savefig(result_savedir+"leiden_res2_clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
             
 #loop區域,尋找可以測試的組合,並建立資料夾
 training_group_DF=pd.DataFrame(columns=['POS','NEG','Color','moduleName'])
@@ -387,12 +470,19 @@ for i in training_group_DF.index:
     POS_training=POS.sample(n=min_sample_count, axis=0)
     NEG_training=NEG.sample(n=min_sample_count, axis=0)
                                 #第一個引數輸入要訓練的feature
-    result = predict_packagecopy1(target_Module_genes,POS_training,NEG_training, cell_data, cell_UMAP_cluster, #cell data, after preprocessing!!
-                                                           list(range(0,len(Module_cluster_Zscore.index))), 
-                                                           list(Module_cluster_Zscore[moduleColor]),
-                                                           "Cluster_"+str(POS_cluster)+"_"+str(moduleColor),
-                                                           module_savedir+moduleColor+'_PC'+str(POS_cluster)+'_NC'+str(NEG_cluster)+'.png'
-                                                          )
+    result = predict_packagecopy2(target_Module_genes,
+                               POS_training, 
+                               NEG_training, 
+                               cell_data, #cell data, after preprocessing!!,cell-gene matrix
+                               cell_UMAP_cluster,#細胞對應cluster
+                               list(range(0,len(Module_cluster_Zscore.index))),#cluster列表 
+                               list(Module_cluster_Zscore[moduleColor]), 
+                               str(moduleColor),
+                               module_savedir+moduleColor+'_PC'+str(POS_cluster)+'_NC'+str(NEG_cluster)+'.png',
+                               cell_leiden_UMAP_cluster,
+                               cell_leiden_cluster,
+                               module_savedir+"barplot_of_pos_rate_on_leiden_res2.png"
+                              )
     predict_list=result['predict_list']
     ACC_mean_std_DF.loc[len(ACC_mean_std_DF.index)]=result['ACC_mean_std']#準確率平均[0]跟標準差[1]
     
@@ -418,14 +508,29 @@ for i in training_group_DF.index:
     sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='prediction',fit_reg=False, legend=True, legend_out=True,size=14)
     plt.savefig(module_savedir+'/positive_UMAP.png', bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
-
+    boundaryC=find_boundary_cluster(cell_leiden_UMAP_cluster, predict_list, cell_leiden_cluster)
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
+    sns.lmplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
+    for i, label in enumerate(range(0,len(cell_leiden_cluster))):
+            
+        #loop through data points and plot each point 
+            for l, row in boundaryUMAP.loc[boundaryUMAP['prediction']==label,:].iterrows():
+                #add the data point as text
+                plt.annotate(int(row['prediction']), 
+                             (row['UMAP1'], row['UMAP2']),
+                             horizontalalignment='center',
+                             verticalalignment='center',
+                             size=11,
+                             )
+    plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
+    del(boundaryC,boundaryUMAP)
     #POS cluster module gene expression (hub gene) heatmap 
     #plt.figure(figsize=(10,10))
     #sns.heatmap(POS_training[target_Module_c_list], vmax=6)
     
     ####whole module genes heatmap
     moduleGenePosHeatmap=sns.clustermap(data=(POS_training[target_Module_genes].T),xticklabels=False,yticklabels=True,
-               figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/40)),method='ward')
+               figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)),method='ward')
     fixed_gene_list = list(moduleGenePosHeatmap.data2d.index)
     plt.savefig(module_savedir+'pos_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
 
@@ -433,27 +538,10 @@ for i in training_group_DF.index:
     NEG_moduleGeneOrdered=NEG_training[target_Module_genes]
     NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
     
-    plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/40)),dpi=100)
+    plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)))
     moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
     plt.savefig(module_savedir+'/neg_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)    
-    
-    
-    
-    moduleGenePosHeatmap=sns.clustermap(data=(POS_training[target_Module_c_list].T),xticklabels=False,yticklabels=True,
-               figsize=((10+16*len(target_Module_c_list)/40),(10+9*len(target_Module_c_list)/40)),method='ward')
-    fixed_gene_list = list(moduleGenePosHeatmap.data2d.index)
-    plt.savefig(module_savedir+'pos_feature_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
 
-    #NEG cluster module gene expression (hub gene) heatmap
-    #plt.figure(figsize=(10,10))
-    #sns.heatmap(NEG_training[target_Module_c_list], vmax=6)
-    NEG_moduleGeneOrdered=NEG_training[target_Module_c_list]
-    NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
-    
-    plt.figure(figsize=((10+16*len(target_Module_c_list)/40),(10+9*len(target_Module_c_list)/40)),dpi=100)
-    moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
-    plt.savefig(module_savedir+'/neg_feature_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
-    
     #訓練資料
  
     #training data (whole module gene) PCC map
@@ -552,111 +640,6 @@ for i in training_group_DF.index:
     plt.legend()
     plt.tight_layout()
     plt.savefig(module_savedir+'prediction_module_PCC.png',   # 儲存圖檔
-                bbox_inches='tight',               # 去除座標軸占用的空間
-                pad_inches=0.0)
-
-    
-    
-    
-    
-    
-    ##########  training data (hub gene) PCC map
-    pos_neg_cor = draw_cor_map(POS_training, NEG_training, target_Module_c_list,
-                               module_savedir+'training_feature_PCC_heatmap_PC'+str(POS_cluster)+'module_'+moduleColor+'.png',
-                               module_savedir+'training_feature_PCC_heatmap_NC'+str(NEG_cluster)+'module_'+moduleColor+'.png')
-    pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
-    neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
-    
-    
-    jcounter=0
-    for listresult in pos_pcc_list:
-        if listresult == 1:
-            jcounter+=1
-         
-    for i in range(jcounter):
-        pos_pcc_list.remove(1)
-        
-    jcounter=0
-    for listresult in neg_pcc_list:
-        if listresult == 1:
-            jcounter+=1
-            
-    for i in range(jcounter):
-        neg_pcc_list.remove(1)
-    
-    plt.figure(figsize=(10,10))
-    sns.set(font_scale=1.5)
-    sns.distplot(neg_pcc_list, label='negative training')
-    sns.distplot(pos_pcc_list, label='positive training')
-    plt.xlabel('PCC', fontsize=20)
-    plt.ylabel('Density', fontsize=20)
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(module_savedir+'training_feature_PCC.png',   # 儲存圖檔
-                bbox_inches='tight',               # 去除座標軸占用的空間
-                pad_inches=0.0)
-    
-    
-    gene_data = cell_data[target_Module_c_list].values.tolist()
-    #pos_list就是被判斷為Positive的細胞中特定module gene的表現量
-    #neg_list就是negitive
-    pos_list = []
-    neg_list = []
-    for result in enumerate(predict_list):
-        if result[1] == 1:
-            pos_list.append(gene_data[result[0]])
-        elif result[1] == 0:
-            neg_list.append(gene_data[result[0]])
-            
-    
-    pos = pd.DataFrame(pos_list)
-    neg = pd.DataFrame(neg_list)
-    
-    #breakpoint()
-    #提醒!要把檔名的cluster拿掉
-    
-    
-    
-    
-    ##predict結果的PCC
-    #prediction result data PCC map
-    
-    pos_neg_cor = draw_cor_map(pos, neg, pos.columns.tolist(),
-                               module_savedir+'prediction_feature_PCC_heatmap_pos'+str(POS_cluster)+'.png',
-                               module_savedir+'prediction_feature_PCC_heatmap_neg'+str(NEG_cluster)+'.png')
-    
-    #breakpoint()
-    pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
-    neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
-    
-    ## 
-    jcounter=0
-    for listresult in pos_pcc_list:
-        if listresult == 1:
-            jcounter+=1     
-    for i in range(jcounter):
-        pos_pcc_list.remove(1)
-        
-    jcounter=0
-    for listresult in neg_pcc_list:
-        if listresult == 1:
-            jcounter+=1        
-    for i in range(jcounter):
-        neg_pcc_list.remove(1)
-    
-    plt.figure(figsize=(10,10))
-    sns.set(font_scale=1.5)
-    sns.distplot(neg_pcc_list, label='negative prediction')
-    sns.distplot(pos_pcc_list, label='positive prediction')
-    plt.xlabel('PCC', fontsize=20)
-    plt.ylabel('Density', fontsize=20)
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(module_savedir+'prediction_feature_PCC.png',   # 儲存圖檔
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     
