@@ -368,7 +368,7 @@ def predict_packagecopy2(module_gene_list, pos_sample, neg_sample, cell_data,
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
 #data資料夾位置的根目錄
 os.chdir("C:/Users/user/Desktop/test/scanpy")
-foldername="scv_pancrease"## datafolder
+foldername="scv_pancreas_prep"## datafolder
 Clustermethod="celltype"
 clustering="clusters2num"
 resultfolder="preservation_result"
@@ -516,12 +516,13 @@ for i in training_group_DF.index:
         #loop through data points and plot each point 
             for l, row in boundaryUMAP.loc[boundaryUMAP['prediction']==label,:].iterrows():
                 #add the data point as text
-                plt.annotate(int(row['prediction']), 
-                             (row['UMAP1'], row['UMAP2']),
-                             horizontalalignment='center',
-                             verticalalignment='center',
-                             size=11,
-                             )
+                if row['prediction']==0:
+                    plt.annotate(int(row['prediction']), 
+                                 (row['UMAP1'], row['UMAP2']),
+                                 horizontalalignment='center',
+                                 verticalalignment='center',
+                                 size=11,
+                                 )
     plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
     del(boundaryC,boundaryUMAP)
     #POS cluster module gene expression (hub gene) heatmap 
