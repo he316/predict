@@ -37,7 +37,11 @@ from sklearn.metrics import plot_precision_recall_curve
 from sklearn.metrics import plot_roc_curve
 import networkx as nx
 import re
-
+import anndata 
+from copy import copy
+import scvelo as scv
+from sklearn.neighbors import NearestNeighbors
+from scipy.stats import norm as normal
 #暫時保留,再加入cross validation就是randomforest_cross 
 def randomforest_predict(posX,negX,data):       
     train_X = posX+negX
@@ -365,19 +369,116 @@ def predict_packagecopy2(module_gene_list, pos_sample, neg_sample, cell_data,
     plt.savefig(save_name_barplot,bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     return result
+#=========from scVelo Start===========    
+def quiver_autoscale(X_emb, V_emb):
+    import matplotlib.pyplot as pl
+
+    scale_factor = np.abs(X_emb).max()  # just so that it handles very large values
+    fig, ax = pl.subplots()
+    Q = ax.quiver(
+        X_emb[:, 0] / scale_factor,
+        X_emb[:, 1] / scale_factor,
+        V_emb[:, 0],
+        V_emb[:, 1],
+        angles="xy",
+        scale_units="xy",
+        scale=None,
+    )
+    Q._init()
+    fig.clf()
+    pl.close(fig)
+    return Q.scale / scale_factor
+
+def compute_velocity_on_grid(
+    X_emb,
+    V_emb,
+    density=None,
+    smooth=None,
+    n_neighbors=None,
+    min_mass=None,
+    autoscale=True,
+    adjust_for_stream=False,
+    cutoff_perc=None,
+):
+    # remove invalid cells
+    idx_valid = np.isfinite(X_emb.sum(1) + V_emb.sum(1))
+    X_emb = X_emb[idx_valid]
+    V_emb = V_emb[idx_valid]
+
+    # prepare grid
+    n_obs, n_dim = X_emb.shape
+    density = 1 if density is None else density
+    smooth = 0.5 if smooth is None else smooth
+
+    grs = []
+    for dim_i in range(n_dim):
+        m, M = np.min(X_emb[:, dim_i]), np.max(X_emb[:, dim_i])
+        m = m - 0.01 * np.abs(M - m)
+        M = M + 0.01 * np.abs(M - m)
+        gr = np.linspace(m, M, int(50 * density))
+        grs.append(gr)
+
+    meshes_tuple = np.meshgrid(*grs)
+    X_grid = np.vstack([i.flat for i in meshes_tuple]).T
+
+    # estimate grid velocities
+    if n_neighbors is None:
+        n_neighbors = int(n_obs / 50)
+    nn = NearestNeighbors(n_neighbors=n_neighbors, n_jobs=-1)
+    nn.fit(X_emb)
+    dists, neighs = nn.kneighbors(X_grid)
+
+    scale = np.mean([(g[1] - g[0]) for g in grs]) * smooth
+    weight = normal.pdf(x=dists, scale=scale)
+    p_mass = weight.sum(1)
+
+    V_grid = (V_emb[neighs] * weight[:, :, None]).sum(1)
+    V_grid /= np.maximum(1, p_mass)[:, None]
+    if min_mass is None:
+        min_mass = 1
+
+    if adjust_for_stream:
+        X_grid = np.stack([np.unique(X_grid[:, 0]), np.unique(X_grid[:, 1])])
+        ns = int(np.sqrt(len(V_grid[:, 0])))
+        V_grid = V_grid.T.reshape(2, ns, ns)
+
+        mass = np.sqrt((V_grid ** 2).sum(0))
+        min_mass = 10 ** (min_mass - 6)  # default min_mass = 1e-5
+        min_mass = np.clip(min_mass, None, np.max(mass) * 0.9)
+        cutoff = mass.reshape(V_grid[0].shape) < min_mass
+
+        if cutoff_perc is None:
+            cutoff_perc = 5
+        length = np.sum(np.mean(np.abs(V_emb[neighs]), axis=1), axis=1).T
+        length = length.reshape(ns, ns)
+        cutoff |= length < np.percentile(length, cutoff_perc)
+
+        V_grid[0][cutoff] = np.nan
+    else:
+        min_mass *= np.percentile(p_mass, 99) / 100
+        X_grid, V_grid = X_grid[p_mass > min_mass], V_grid[p_mass > min_mass]
+
+        if autoscale:
+            V_grid /= 3 * quiver_autoscale(X_grid, V_grid)
+
+    return X_grid, V_grid
+#========from scVelo End==============
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
 #data資料夾位置的根目錄
 os.chdir("C:/Users/user/Desktop/test/scanpy")
-foldername="scv_pancreas_prep"## datafolder
+foldername="scv_pancreas_impute"## datafolder
 Clustermethod="celltype"
 clustering="clusters2num"
+adata=anndata.read_h5ad('./'+foldername+'/'+foldername+'.h5ad')
 resultfolder="preservation_result"
 savedir="./"+foldername+"/"+Clustermethod+"_cluster_"
 clustering_size = pd.read_csv("./"+foldername+"/"+Clustermethod+"_clustering_size.csv")
 cell_data = pd.read_csv("./"+foldername+"/preprocessed_cell.csv",index_col=0)
 cell_UMAP_cluster = pd.read_csv("./"+foldername+"/UMAP_cell_embeddings_to_"+Clustermethod+"_clusters_and_coordinates.csv",index_col=0)
 result_savedir="./"+foldername+"/"+resultfolder+"/"
-cell_leiden_UMAP_cluster = pd.read_csv("./"+foldername+"_leiden2/UMAP_cell_embeddings_to_leiden_clusters_and_coordinates.csv",index_col=0)
+cell_leiden_UMAP_cluster = copy(cell_UMAP_cluster)
+cell_leiden_UMAP_cluster=cell_leiden_UMAP_cluster.rename(columns={'clusters2num':'leiden'})
+cell_leiden_UMAP_cluster['leiden']=pd.to_numeric(adata.obs.leiden,downcast='unsigned')
 cell_UMAP_cluster['leiden']=cell_leiden_UMAP_cluster['leiden']
 cell_leiden_cluster=list(set(cell_UMAP_cluster['leiden']))
 try:
@@ -425,7 +526,7 @@ for i in training_group_DF.index:
     POS_cluster=training_group_DF.loc[i]['POS']
     NEG_cluster=training_group_DF.loc[i]['NEG']
     moduleColor=training_group_DF.loc[i]['Color']
-    
+    bdata=adata.copy()
     module_savedir=result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor+"/"
     
     Module_cluster_Zscore = pd.read_csv(savedir+str(POS_cluster)+'/module_preservation_Zscore.csv',index_col=0)
@@ -498,7 +599,7 @@ for i in training_group_DF.index:
     
     cell_UMAP_cluster['training_clusters']=pos_cluster_neg_cluster_cell_list
         
-    sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='training_clusters',fit_reg=False, legend=True, legend_out=True,size=14)
+    sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='training_clusters',fit_reg=False, legend=True, legend_out=True,size=14,hue_order=(sorted(list(set(cell_UMAP_cluster['training_clusters'])))))
     plt.savefig(module_savedir+'/training_cluster_UMAP.png', bbox_inches='tight',pad_inches=0.0)
     
     #predict_listtest_to_color = change_color(predict_listtest, '#808080', '#FF0000')
@@ -510,21 +611,35 @@ for i in training_group_DF.index:
                 pad_inches=0.0)
     boundaryC=find_boundary_cluster(cell_leiden_UMAP_cluster, predict_list, cell_leiden_cluster)
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
-    sns.lmplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
-    for i, label in enumerate(range(0,len(cell_leiden_cluster))):
-            
-        #loop through data points and plot each point 
-            for l, row in boundaryUMAP.loc[boundaryUMAP['prediction']==label,:].iterrows():
-                #add the data point as text
-                if row['prediction']==0:
-                    plt.annotate(int(row['prediction']), 
-                                 (row['UMAP1'], row['UMAP2']),
-                                 horizontalalignment='center',
-                                 verticalalignment='center',
-                                 size=11,
-                                 )
+    boundaryCstr=[str(int) for int in boundaryC]
+    bdata=bdata[bdata.obs.leiden.isin(boundaryCstr)]
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryCstr)]
+    X_emb = np.array(bdata.obsm["X_umap"][:, [0,1]])
+    V_emb = np.array(bdata.obsm["velocity_umap"][:, [0,1]])
+    X_grid, V_grid = compute_velocity_on_grid(
+        X_emb=X_emb,
+        V_emb=V_emb,
+        density=1,
+        autoscale=False,
+        adjust_for_stream=True
+    )
+    lengths = np.sqrt((V_grid ** 2).sum(0))
+    linewidth=None
+    linewidth = 1 if linewidth is None else linewidth
+    linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
+    stream_kwargs = {
+                "linewidth": linewidth,
+                "density": 2 ,
+                "zorder": 3,
+                "color": "k" 
+    }
+    fig=plt.figure(figsize=(8,6),dpi=150)
+    g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
+    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',ax=fig.gca())
+    g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
     plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
-    del(boundaryC,boundaryUMAP)
+    plt.clf()
+    del(boundaryC,boundaryCstr,boundaryUMAP,X_emb,V_emb,X_grid,V_grid,stream_kwargs)
     #POS cluster module gene expression (hub gene) heatmap 
     #plt.figure(figsize=(10,10))
     #sns.heatmap(POS_training[target_Module_c_list], vmax=6)
