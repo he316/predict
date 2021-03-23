@@ -462,11 +462,16 @@ def compute_velocity_on_grid(
             V_grid /= 3 * quiver_autoscale(X_grid, V_grid)
 
     return X_grid, V_grid
+
+def get_emb(adata):
+    X_emb = np.array(adata.obsm["X_umap"][:, [0,1]])
+    V_emb = np.array(adata.obsm["velocity_umap"][:, [0,1]])
+    return X_emb, V_emb
 #========from scVelo End==============
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
 #data資料夾位置的根目錄
 os.chdir("C:/Users/user/Desktop/test/scanpy")
-foldername="scv_pancreas_impute"## datafolder
+foldername="scv_pancreas_prep"## datafolder
 Clustermethod="celltype"
 clustering="clusters2num"
 adata=anndata.read_h5ad('./'+foldername+'/'+foldername+'.h5ad')
@@ -485,7 +490,14 @@ try:
     os.mkdir(result_savedir,755)
 except:
     pass
-
+os.chdir("./"+foldername)
+scv.pl.velocity_embedding_stream(adata, basis='umap',save="celltype_stream.png",dpi=150)
+scv.pl.velocity_embedding_stream(adata, basis='umap',legend_loc="right",save="celltype_stream_legend_out.png",dpi=150)
+scv.pl.velocity_embedding_stream(adata, basis='umap',color='clusters2num',legend_loc="right",save="clusters2num_stream_legend_out.png",dpi=150)
+scv.pl.velocity_embedding_stream(adata, basis='umap',color='clusters2num',save="clusters2num_stream.png",dpi=150)
+scv.pl.velocity_embedding_stream(adata, basis='umap',color='leiden',legend_loc="right",save="leiden_stream_legend_out.png",dpi=150)
+scv.pl.velocity_embedding_stream(adata, basis='umap',color='leiden',save="leiden_stream.png",dpi=150)
+os.chdir('../')
 drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clustering,
                       result_savedir+"clustering_UMAP_annotation.png")
 
@@ -526,7 +538,7 @@ for i in training_group_DF.index:
     POS_cluster=training_group_DF.loc[i]['POS']
     NEG_cluster=training_group_DF.loc[i]['NEG']
     moduleColor=training_group_DF.loc[i]['Color']
-    bdata=adata.copy()
+    
     module_savedir=result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor+"/"
     
     Module_cluster_Zscore = pd.read_csv(savedir+str(POS_cluster)+'/module_preservation_Zscore.csv',index_col=0)
@@ -612,10 +624,10 @@ for i in training_group_DF.index:
     boundaryC=find_boundary_cluster(cell_leiden_UMAP_cluster, predict_list, cell_leiden_cluster)
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
+    bdata=adata.copy()
     bdata=bdata[bdata.obs.leiden.isin(boundaryCstr)]
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryCstr)]
-    X_emb = np.array(bdata.obsm["X_umap"][:, [0,1]])
-    V_emb = np.array(bdata.obsm["velocity_umap"][:, [0,1]])
+    X_emb,V_emb=get_emb(bdata)
     X_grid, V_grid = compute_velocity_on_grid(
         X_emb=X_emb,
         V_emb=V_emb,
@@ -633,11 +645,36 @@ for i in training_group_DF.index:
                 "zorder": 3,
                 "color": "k" 
     }
-    fig=plt.figure(figsize=(8,6),dpi=150)
+    fig=plt.figure(figsize=(16,12),dpi=150)
     g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
-    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',ax=fig.gca())
+    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
     g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
     plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
+    plt.clf()
+    
+    X_emb,V_emb=get_emb(adata)
+    X_grid, V_grid = compute_velocity_on_grid(
+        X_emb=X_emb,
+        V_emb=V_emb,
+        density=1,
+        autoscale=False,
+        adjust_for_stream=True
+    )
+    lengths = np.sqrt((V_grid ** 2).sum(0))
+    linewidth=None
+    linewidth = 1 if linewidth is None else linewidth
+    linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
+    stream_kwargs = {
+                "linewidth": linewidth,
+                "density": 4 ,
+                "zorder": 3,
+                "color": "k" 
+    }
+    fig=plt.figure(figsize=(16,12),dpi=150)
+    g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
+    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
+    g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
+    plt.savefig(module_savedir+'/global_stream_positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
     plt.clf()
     del(boundaryC,boundaryCstr,boundaryUMAP,X_emb,V_emb,X_grid,V_grid,stream_kwargs)
     #POS cluster module gene expression (hub gene) heatmap 
