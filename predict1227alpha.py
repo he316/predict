@@ -360,7 +360,7 @@ def predict_packagecopy2(module_gene_list, pos_sample, neg_sample, cell_data,
         
     pltdata={"positive_rate":pr,
         "Cluster":cell_leiden_cluster}    
-    plt.figure(figsize=(10,6))
+    plt.figure(figsize=(20,6))
     splot = sns.barplot(data=pltdata, x = 'Cluster', y = 'positive_rate', ci = None)
     for p in splot.patches:
         splot.annotate(format(p.get_height(), '.2f'), (p.get_x() + p.get_width() / 2., p.get_height()), ha = 'center', va = 'center', xytext = (0, 10), textcoords = 'offset points')
@@ -471,7 +471,7 @@ def get_emb(adata):
 #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
 #data資料夾位置的根目錄
 os.chdir("C:/Users/user/Desktop/test/scanpy")
-foldername="scv_pancreas_prep"## datafolder
+foldername="scv_pancreas_impute"## datafolder
 Clustermethod="celltype"
 clustering="clusters2num"
 adata=anndata.read_h5ad('./'+foldername+'/'+foldername+'.h5ad')
@@ -628,55 +628,58 @@ for i in training_group_DF.index:
     bdata=bdata[bdata.obs.leiden.isin(boundaryCstr)]
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryCstr)]
     X_emb,V_emb=get_emb(bdata)
-    X_grid, V_grid = compute_velocity_on_grid(
-        X_emb=X_emb,
-        V_emb=V_emb,
-        density=1,
-        autoscale=False,
-        adjust_for_stream=True
-    )
-    lengths = np.sqrt((V_grid ** 2).sum(0))
-    linewidth=None
-    linewidth = 1 if linewidth is None else linewidth
-    linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
-    stream_kwargs = {
-                "linewidth": linewidth,
-                "density": 2 ,
-                "zorder": 3,
-                "color": "k" 
-    }
-    fig=plt.figure(figsize=(16,12),dpi=150)
-    g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
-    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
-    g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
-    plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
-    plt.clf()
-    
-    X_emb,V_emb=get_emb(adata)
-    X_grid, V_grid = compute_velocity_on_grid(
-        X_emb=X_emb,
-        V_emb=V_emb,
-        density=1,
-        autoscale=False,
-        adjust_for_stream=True
-    )
-    lengths = np.sqrt((V_grid ** 2).sum(0))
-    linewidth=None
-    linewidth = 1 if linewidth is None else linewidth
-    linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
-    stream_kwargs = {
-                "linewidth": linewidth,
-                "density": 4 ,
-                "zorder": 3,
-                "color": "k" 
-    }
-    fig=plt.figure(figsize=(16,12),dpi=150)
-    g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
-    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
-    g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
-    plt.savefig(module_savedir+'/global_stream_positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
-    plt.clf()
-    del(boundaryC,boundaryCstr,boundaryUMAP,X_emb,V_emb,X_grid,V_grid,stream_kwargs)
+    try:
+        X_grid, V_grid = compute_velocity_on_grid(
+            X_emb=X_emb,
+            V_emb=V_emb,
+            density=1,
+            autoscale=False,
+            adjust_for_stream=True
+        )
+        lengths = np.sqrt((V_grid ** 2).sum(0))
+        linewidth=None
+        linewidth = 1 if linewidth is None else linewidth
+        linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
+        stream_kwargs = {
+                    "linewidth": linewidth,
+                    "density": 2 ,
+                    "zorder": 3,
+                    "color": "k" 
+        }
+        fig=plt.figure(figsize=(16,12),dpi=150)
+        g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
+        g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
+        g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
+        plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
+        plt.clf()
+    except:
+        pass
+    finally:
+        X_emb,V_emb=get_emb(adata)
+        X_grid, V_grid = compute_velocity_on_grid(
+            X_emb=X_emb,
+            V_emb=V_emb,
+            density=1,
+            autoscale=False,
+            adjust_for_stream=True
+        )
+        lengths = np.sqrt((V_grid ** 2).sum(0))
+        linewidth=None
+        linewidth = 1 if linewidth is None else linewidth
+        linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
+        stream_kwargs = {
+                    "linewidth": linewidth,
+                    "density": 4 ,
+                    "zorder": 3,
+                    "color": "k" 
+        }
+        fig=plt.figure(figsize=(16,12),dpi=150)
+        g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
+        g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
+        g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
+        plt.savefig(module_savedir+'/global_stream_positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
+        plt.clf()
+        del(boundaryC,boundaryCstr,boundaryUMAP,X_emb,V_emb,X_grid,V_grid,stream_kwargs)
     #POS cluster module gene expression (hub gene) heatmap 
     #plt.figure(figsize=(10,10))
     #sns.heatmap(POS_training[target_Module_c_list], vmax=6)
