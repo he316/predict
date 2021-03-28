@@ -649,37 +649,37 @@ for i in training_group_DF.index:
         fig=plt.figure(figsize=(16,12),dpi=150)
         g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
         g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
-        g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
+        g.legend(loc='right', bbox_to_anchor=(1.2, 0.5), ncol=1)
         plt.savefig(module_savedir+'/positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
         plt.clf()
     except:
         pass
-    finally:
-        X_emb,V_emb=get_emb(adata)
-        X_grid, V_grid = compute_velocity_on_grid(
-            X_emb=X_emb,
-            V_emb=V_emb,
-            density=1,
-            autoscale=False,
-            adjust_for_stream=True
-        )
-        lengths = np.sqrt((V_grid ** 2).sum(0))
-        linewidth=None
-        linewidth = 1 if linewidth is None else linewidth
-        linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
-        stream_kwargs = {
-                    "linewidth": linewidth,
-                    "density": 4 ,
-                    "zorder": 3,
-                    "color": "k" 
-        }
-        fig=plt.figure(figsize=(16,12),dpi=150)
-        g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
-        g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
-        g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
-        plt.savefig(module_savedir+'/global_stream_positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
-        plt.clf()
-        del(boundaryC,boundaryCstr,boundaryUMAP,X_emb,V_emb,X_grid,V_grid,stream_kwargs)
+    
+    X_emb,V_emb=get_emb(adata)
+    X_grid, V_grid = compute_velocity_on_grid(
+        X_emb=X_emb,
+        V_emb=V_emb,
+        density=1,
+        autoscale=False,
+        adjust_for_stream=True
+    )
+    lengths = np.sqrt((V_grid ** 2).sum(0))
+    linewidth=None
+    linewidth = 1 if linewidth is None else linewidth
+    linewidth *= 2 * lengths / lengths[~np.isnan(lengths)].max()
+    stream_kwargs = {
+                "linewidth": linewidth,
+                "density": 4 ,
+                "zorder": 3,
+                "color": "k" 
+    }
+    fig=plt.figure(figsize=(16,12),dpi=150)
+    g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
+    g=sns.scatterplot(data=boundaryUMAP, x='UMAP1', y='UMAP2', hue='leiden',palette='tab10',style='prediction',style_order=([1,0]),ax=fig.gca())
+    g.legend(loc='right', bbox_to_anchor=(1.5, 0.5), ncol=1)
+    plt.savefig(module_savedir+'/global_stream_positive_UMAP_boundary_annotated.png', bbox_inches='tight',pad_inches=0.0)
+    plt.clf()
+    del(boundaryC,boundaryCstr,boundaryUMAP,X_emb,V_emb,X_grid,V_grid,stream_kwargs)
     #POS cluster module gene expression (hub gene) heatmap 
     #plt.figure(figsize=(10,10))
     #sns.heatmap(POS_training[target_Module_c_list], vmax=6)
