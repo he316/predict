@@ -42,6 +42,7 @@ from copy import copy
 import scvelo as scv
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import norm as normal
+import gc
 #暫時保留,再加入cross validation就是randomforest_cross 
 def randomforest_predict(posX,negX,data):       
     train_X = posX+negX
@@ -111,6 +112,7 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
                 pad_inches=0.0)                    # 去除所有白邊
     fig=plt.gcf()
     plt.clf(fig)
+    plt.close(fig)
     #negative組的圖，軸由positive決定    
     
     neg_data = neg_data[col_name_list]
@@ -139,7 +141,7 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
     return [pos_gene, neg_gene]
 ### random forest
 def predict_package(module_gene_list, pos_sample, neg_sample, data, count_cluster_list, preservation_255_list,  title, save_name_255):
@@ -327,14 +329,14 @@ def find_boundary_cluster(cell_UMAP_cluster,Predictlist,Cluster,column_name,save
     plt.savefig(save_name_barplot,bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
     bdc=[]
     for index,element in enumerate(pr):
         if element<0.9 and element>0.1:
             bdc.append(index)
     return bdc
 
-def sort_and_group():
+def prediction_andploting():
     
     return
 
@@ -388,7 +390,7 @@ def predict_packagecopy2(module_gene_list,
     plt.savefig(save_name_255,bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
     ##回傳值已改成dictionary,一個裝 predict_list,另一個裝ACC的mean跟std
     #後面需要num_list
     #predict_list會標註說哪一些細胞被判斷成positive,哪一些細胞被判斷成negtive,
@@ -412,7 +414,7 @@ def quiver_autoscale(X_emb, V_emb):
         scale=None,
     )
     Q._init()
-    fig.clf()
+    fig.close()
     pl.close(fig)
     return Q.scale / scale_factor
 
@@ -496,7 +498,7 @@ def get_emb(adata):
     return X_emb, V_emb
 
 def velocity_stream_scatterplt(adata,pltdata,
-                                      x,y,hue,style,style_order,
+                                      x,y,hue,palette,style,style_order,
                                       density,bbox_to_anchor_x,savename):
     X_emb,V_emb=get_emb(adata)
     X_grid, V_grid = compute_velocity_on_grid(
@@ -518,11 +520,11 @@ def velocity_stream_scatterplt(adata,pltdata,
     }
     fig=plt.figure(figsize=(16,12),dpi=150)
     g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
-    g=sns.scatterplot(data=pltdata, x=x, y=y, hue=hue,palette='tab20',style=style,style_order=style_order,s=196,alpha=0.65,markers=('o','$\u043E$'),ax=fig.gca())
+    g=sns.scatterplot(data=pltdata, x=x, y=y, hue=hue,palette=palette,style=style,style_order=style_order,s=196,alpha=0.65,markers=('o','$\u043E$'),ax=fig.gca())
     g.legend(loc='right', bbox_to_anchor=(bbox_to_anchor_x, 0.5), ncol=1)
     plt.savefig(savename, bbox_inches='tight',pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
 
 
 #========from scVelo End==============
@@ -555,7 +557,7 @@ scv.pl.velocity_embedding_stream(adata, basis='umap',color=clustering,legend_loc
 scv.pl.velocity_embedding_stream(adata, basis='umap',color=clustering,save="clusters2num_stream.png",dpi=150)
 scv.pl.velocity_embedding_stream(adata, basis='umap',color='leiden',legend_loc="right",save="leiden_stream_legend_out.png",dpi=150)
 scv.pl.velocity_embedding_stream(adata, basis='umap',color='leiden',save="leiden_stream.png",dpi=150)
-scv.pl.scatter(adata, color='latent_time', color_map='gnuplot', size=80, colorbar=True,save="latent_time_scatterplt.png",figsize=(10,10),dpi=150)
+scv.pl.scatter(adata, color='latent_time', color_map='winter', size=80, colorbar=True,save="latent_time_scatterplt.png",figsize=(10,10),dpi=150)
 os.chdir('../')
 drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clustering,
                       result_savedir+"clustering_UMAP_annotation.png")
@@ -563,21 +565,21 @@ drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clus
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue=clustering,fit_reg=False, legend=True, legend_out=True,size=14)
 plt.savefig(result_savedir+"clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
 fig=plt.gcf()
-plt.clf(fig)
+plt.close(fig)
 drawlmplot_annotation(cell_UMAP_cluster, cell_leiden_cluster, 'UMAP1', 'UMAP2', 'leiden',
                       result_savedir+"leiden_res2_clustering_UMAP_annotation.png")
 
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
 plt.savefig(result_savedir+"leiden_res2_clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
 fig=plt.gcf()
-plt.clf(fig)
+plt.close(fig)
             
 plt.figure(figsize=(10,10))
 sns.distplot(cell_UMAP_cluster['latent_time'])
 plt.ylabel('Density')
 plt.savefig(result_savedir+"latent_time_distribution.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
 fig=plt.gcf()
-plt.clf(fig)
+plt.close(fig)
 adata.obs['fixed_time_latent_time_group']=adata.obs.latent_time
 for i in range(0,10,1):
     if i<9:
@@ -600,6 +602,10 @@ for i in range(0,10,1):
         adata.obs.loc[adata[np.where((adata.obs.latent_time>=(floor))&
                                      (adata.obs.latent_time<=(celling)))].obs.fixed_cell_number_latent_time_group.index, 'fixed_cell_number_latent_time_group'] = pd.to_numeric(i,downcast='unsigned')
 cell_UMAP_cluster['fixed_cell_number_latent_time_group']=adata.obs.fixed_cell_number_latent_time_group
+velocity_stream_scatterplt(adata=adata,pltdata=cell_UMAP_cluster,x='UMAP1',y='UMAP2',hue='fixed_cell_number_latent_time_group',palette='tab10',style= None,
+                                   style_order=None,density=1,bbox_to_anchor_x=1.4,savename=result_savedir+'fixed_cell_number_latent_time_group.png')
+velocity_stream_scatterplt(adata=adata,pltdata=cell_UMAP_cluster,x='UMAP1',y='UMAP2',hue='fixed_time_latent_time_group',palette='tab10',style= None,
+                                   style_order=None,density=1,bbox_to_anchor_x=1.4,savename=result_savedir+'fixed_time_latent_time_group.png')
 
 del(sorted_latent_time)
 
@@ -707,7 +713,7 @@ for i in training_group_DF.index:
     sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='training_clusters',fit_reg=False, legend=True, legend_out=True,size=14,hue_order=(sorted(list(set(cell_UMAP_cluster['training_clusters'])))))
     plt.savefig(module_savedir+'/training_cluster_UMAP.png', bbox_inches='tight',pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
     #predict_listtest_to_color = change_color(predict_listtest, '#808080', '#FF0000')
     cell_UMAP_cluster['prediction']=predict_list
     #標示出predict為pos和neg的細胞分布 UMAP
@@ -716,7 +722,7 @@ for i in training_group_DF.index:
     plt.savefig(module_savedir+'/positive_UMAP.png', bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
     boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, cell_leiden_cluster,'leiden',module_savedir+"barplot_of_pos_rate_on_leiden_res2.png")
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
@@ -724,11 +730,11 @@ for i in training_group_DF.index:
     bdata=bdata[bdata.obs.leiden.isin(boundaryCstr)]
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryCstr)]
     try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='leiden',style='prediction',
+        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='winter',style='prediction',
                                    style_order=[1,0],density=1,bbox_to_anchor_x=1.2,savename=module_savedir+'/positive_UMAP_boundary_annotated.png')
     except:
         pass
-    velocity_stream_scatterplt(adata=adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='leiden',style='prediction',
+    velocity_stream_scatterplt(adata=adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='winter',style='prediction',
                                style_order=[1,0],density=1,bbox_to_anchor_x=1.2,savename=module_savedir+'/global_stream_positive_UMAP_boundary_annotated.png')
     del(boundaryC,boundaryCstr,boundaryUMAP)
     
@@ -739,11 +745,11 @@ for i in training_group_DF.index:
     bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryCstr)]
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryCstr)]
     try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='fixed_time_latent_time_group',
+        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='winter',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.4,savename=module_savedir+'/fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png')
     except:
         pass
-    velocity_stream_scatterplt(adata=adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='fixed_time_latent_time_group',
+    velocity_stream_scatterplt(adata=adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='winter',
                                style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.4,savename=module_savedir+'/fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png')
     del(boundaryC,boundaryCstr,boundaryUMAP)
     
@@ -755,13 +761,14 @@ for i in training_group_DF.index:
     bdata=bdata[bdata.obs.fixed_cell_number_latent_time_group.isin(boundaryCstr)]
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryCstr)]
     try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='fixed_cell_number_latent_time_group',
+        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='winter',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.4,savename=module_savedir+'fixed_cell_number_latent_time_group_positive_UMAP_boundary_annotated.png')
     except:
         pass
-    velocity_stream_scatterplt(adata=adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='fixed_cell_number_latent_time_group',
+    velocity_stream_scatterplt(adata=adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='winter',
                                style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.4,savename=module_savedir+'/fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png')
     del(boundaryC,boundaryCstr,boundaryUMAP)
+    gc.collect()
     
     #POS cluster module gene expression (hub gene) heatmap 
     #plt.figure(figsize=(10,10))
@@ -773,7 +780,7 @@ for i in training_group_DF.index:
     fixed_gene_list = list(moduleGenePosHeatmap.data2d.index)
     plt.savefig(module_savedir+'pos_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)    
+    plt.close(fig)    
     NEG_moduleGeneOrdered=NEG_training[target_Module_genes]
     NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
     
@@ -781,7 +788,7 @@ for i in training_group_DF.index:
     moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
     plt.savefig(module_savedir+'/neg_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)    
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
     #訓練資料
  
     #training data (whole module gene) PCC map
@@ -822,7 +829,7 @@ for i in training_group_DF.index:
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)    
+    plt.close(fig)    
     gene_data = cell_data[target_Module_genes]
     
     pos = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==1].index)]
@@ -874,7 +881,10 @@ for i in training_group_DF.index:
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
-    plt.clf(fig)
+    plt.close(fig)
+    del(gene_data,moduleGeneNegHeatmap,moduleGenePosHeatmap,neg,NEG_moduleGeneOrdered,neg_pcc_list,NEG_training,pos,pos_cluster_neg_cluster_cell_list,pos_neg_cor,pos_pcc_list,POS_training,target_Module)
+    gc.collect()
+    
 training_group_DF=pd.concat([training_group_DF, ACC_mean_std_DF], axis=1)#把測試組合與其準確率跟準確率標準差合併
 
 
