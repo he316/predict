@@ -109,9 +109,9 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
     plt.savefig(pos_figure_name,   # 儲存圖檔
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)                    # 去除所有白邊
-    plt.close()
+    fig=plt.gcf()
+    plt.clf(fig)
     #negative組的圖，軸由positive決定    
-    column_list = col_name_list
     
     neg_data = neg_data[col_name_list]
     neg_gene = []
@@ -138,7 +138,8 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
     plt.savefig(neg_figure_name,   # 儲存圖檔
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
-    plt.close()
+    fig=plt.gcf()
+    plt.clf(fig)
     return [pos_gene, neg_gene]
 ### random forest
 def predict_package(module_gene_list, pos_sample, neg_sample, data, count_cluster_list, preservation_255_list,  title, save_name_255):
@@ -303,6 +304,8 @@ def drawlmplot_annotation(pltdata,cluster,Xaxis,Yaxis,Hue,savepath):
                              size=11,
                              )
     plt.savefig(savepath, bbox_inches='tight',pad_inches=0.0)
+    fig=plt.gcf()
+    plt.close(fig)
 def positive_rate(Cluster,Predictlist,cell_UMAP,column_name):
     pr=[]
     for i in Cluster:
@@ -323,6 +326,8 @@ def find_boundary_cluster(cell_UMAP_cluster,Predictlist,Cluster,column_name,save
     plt.ylabel("Positive_Rate", size=14)
     plt.savefig(save_name_barplot,bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
+    fig=plt.gcf()
+    plt.clf(fig)
     bdc=[]
     for index,element in enumerate(pr):
         if element<0.9 and element>0.1:
@@ -382,25 +387,14 @@ def predict_packagecopy2(module_gene_list,
     
     plt.savefig(save_name_255,bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
+    fig=plt.gcf()
+    plt.clf(fig)
     ##回傳值已改成dictionary,一個裝 predict_list,另一個裝ACC的mean跟std
     #後面需要num_list
     #predict_list會標註說哪一些細胞被判斷成positive,哪一些細胞被判斷成negtive,
     #copy1 ver:num_list已經改成positive_rate
     #          preservation_255_list已經改成 preservation_Z_score
     #
-    if(1<0):
-        pr = positive_rate(cell_leiden_cluster,result['predict_list'],cell_UMAP_cluster,'leiden')
-            
-        pltdata={"positive_rate":pr,
-            "Cluster":cell_leiden_cluster}    
-        plt.figure(figsize=(20,6))
-        splot = sns.barplot(data=pltdata, x = 'Cluster', y = 'positive_rate', ci = None)
-        for p in splot.patches:
-            splot.annotate(format(p.get_height(), '.2f'), (p.get_x() + p.get_width() / 2., p.get_height()), ha = 'center', va = 'center', xytext = (0, 10), textcoords = 'offset points')
-        plt.xlabel("Clusters", size=14)
-        plt.ylabel("Positive_Rate", size=14)
-        plt.savefig(save_name_barplot,bbox_inches='tight',               # 去除座標軸占用的空間
-                    pad_inches=0.0)
     return result
 #=========from scVelo Start===========    
 def quiver_autoscale(X_emb, V_emb):
@@ -527,7 +521,8 @@ def velocity_stream_scatterplt(adata,pltdata,
     g=sns.scatterplot(data=pltdata, x=x, y=y, hue=hue,palette='tab20',style=style,style_order=style_order,s=196,alpha=0.65,markers=('o','$\u043E$'),ax=fig.gca())
     g.legend(loc='right', bbox_to_anchor=(bbox_to_anchor_x, 0.5), ncol=1)
     plt.savefig(savename, bbox_inches='tight',pad_inches=0.0)
-    plt.clf()
+    fig=plt.gcf()
+    plt.clf(fig)
 
 
 #========from scVelo End==============
@@ -567,17 +562,22 @@ drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clus
 
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue=clustering,fit_reg=False, legend=True, legend_out=True,size=14)
 plt.savefig(result_savedir+"clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
+fig=plt.gcf()
+plt.clf(fig)
 drawlmplot_annotation(cell_UMAP_cluster, cell_leiden_cluster, 'UMAP1', 'UMAP2', 'leiden',
                       result_savedir+"leiden_res2_clustering_UMAP_annotation.png")
 
 sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='leiden',fit_reg=False, legend=True, legend_out=True,size=14)
 plt.savefig(result_savedir+"leiden_res2_clustering_UMAP.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
+fig=plt.gcf()
+plt.clf(fig)
             
 plt.figure(figsize=(10,10))
 sns.distplot(cell_UMAP_cluster['latent_time'])
 plt.ylabel('Density')
 plt.savefig(result_savedir+"latent_time_distribution.png", bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
-
+fig=plt.gcf()
+plt.clf(fig)
 adata.obs['fixed_time_latent_time_group']=adata.obs.latent_time
 for i in range(0,10,1):
     if i<9:
@@ -706,7 +706,8 @@ for i in training_group_DF.index:
         
     sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='training_clusters',fit_reg=False, legend=True, legend_out=True,size=14,hue_order=(sorted(list(set(cell_UMAP_cluster['training_clusters'])))))
     plt.savefig(module_savedir+'/training_cluster_UMAP.png', bbox_inches='tight',pad_inches=0.0)
-    
+    fig=plt.gcf()
+    plt.clf(fig)
     #predict_listtest_to_color = change_color(predict_listtest, '#808080', '#FF0000')
     cell_UMAP_cluster['prediction']=predict_list
     #標示出predict為pos和neg的細胞分布 UMAP
@@ -714,6 +715,8 @@ for i in training_group_DF.index:
     sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='prediction',fit_reg=False, legend=True, legend_out=True,size=14)
     plt.savefig(module_savedir+'/positive_UMAP.png', bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
+    fig=plt.gcf()
+    plt.clf(fig)
     boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, cell_leiden_cluster,'leiden',module_savedir+"barplot_of_pos_rate_on_leiden_res2.png")
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
@@ -769,15 +772,16 @@ for i in training_group_DF.index:
                figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)),method='ward')
     fixed_gene_list = list(moduleGenePosHeatmap.data2d.index)
     plt.savefig(module_savedir+'pos_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)
-
-    
+    fig=plt.gcf()
+    plt.clf(fig)    
     NEG_moduleGeneOrdered=NEG_training[target_Module_genes]
     NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
     
     plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)))
     moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
     plt.savefig(module_savedir+'/neg_module_gene_heatmap.png', bbox_inches='tight',pad_inches=0.0)    
-
+    fig=plt.gcf()
+    plt.clf(fig)
     #訓練資料
  
     #training data (whole module gene) PCC map
@@ -817,8 +821,8 @@ for i in training_group_DF.index:
     plt.savefig(module_savedir+'training_module_PCC.png',   # 儲存圖檔
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
-    
-    
+    fig=plt.gcf()
+    plt.clf(fig)    
     gene_data = cell_data[target_Module_genes]
     
     pos = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==1].index)]
@@ -869,7 +873,8 @@ for i in training_group_DF.index:
     plt.savefig(module_savedir+'prediction_module_PCC.png',   # 儲存圖檔
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
-    
+    fig=plt.gcf()
+    plt.clf(fig)
 training_group_DF=pd.concat([training_group_DF, ACC_mean_std_DF], axis=1)#把測試組合與其準確率跟準確率標準差合併
 
 
