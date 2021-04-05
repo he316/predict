@@ -111,7 +111,6 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
                 bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)                    # 去除所有白邊
     fig=plt.gcf()
-    plt.clf(fig)
     plt.close(fig)
     #negative組的圖，軸由positive決定    
     
