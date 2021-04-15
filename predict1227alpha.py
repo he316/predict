@@ -485,7 +485,7 @@ def prediction_and_ploting(Adata,#adata
     except:
         pass
     velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='jet',
-                               style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, '/fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+                               style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
     try:
         g=plt.figure(figsize=(10,10),dpi=150)
         g=sns.boxenplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
@@ -809,11 +809,11 @@ def main():
     adata = anndata.read_h5ad(os.path.join('.', foldername, foldername+'.h5ad'))
     
     resultfolder = "preservation_result"
-    savedir = os.path.join(".", foldername, Clustermethod, "_cluster_")
+    savedir = os.path.join(".", foldername, Clustermethod+"_cluster_")
     result_savedir = os.path.join(".", foldername, resultfolder, "")
     
     clustering_size = pd.read_csv(os.path.join(".", foldername, Clustermethod+"_clustering_size.csv"))
-    cell_data = pd.read_csv(os.path.join(".", foldername, "/preprocessed_cell.csv"),index_col=0)
+    cell_data = pd.read_csv(os.path.join(".", foldername, "preprocessed_cell.csv"),index_col=0)
     cell_UMAP_cluster = pd.read_csv(os.path.join(".", foldername, "UMAP_cell_embeddings_to_"+Clustermethod+"_clusters_and_coordinates.csv"),index_col=0)
     
     cell_UMAP_cluster['leiden'] = pd.to_numeric(adata.obs.leiden,downcast='unsigned')#uint64
@@ -937,6 +937,7 @@ def main():
     plt.savefig(os.path.join(result_savedir, "PCC_of_positive_rate_and_preservation_Z_score.png"), bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
     fig=plt.gcf()
     plt.close(fig)
+    #breakpoint()
 
 if __name__=="__main__":
     main()
