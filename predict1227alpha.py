@@ -499,9 +499,11 @@ def prediction_and_ploting(Adata,#adata
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_UMAP_boundary_annotated.png'))
     except:
         pass
+    velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
     try:
         g=plt.figure(figsize=(10,10),dpi=150)
+        g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
         plt.savefig(os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
         plt.close()
     except:
