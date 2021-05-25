@@ -8,9 +8,6 @@
 import os
 from os import listdir
 import pandas as pd
-import umap
-from tqdm import tqdm_notebook
-import tqdm
 import scipy.stats as sc
 import numpy as np
 import seaborn as sns
@@ -24,6 +21,7 @@ from sklearn import ensemble, preprocessing, metrics
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 from sklearn.ensemble import RandomForestClassifier
 from random import sample
 import csv
@@ -43,6 +41,7 @@ import scvelo as scv
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import norm as normal
 import gc
+#from memory_profiler import profile
 #暫時保留,再加入cross validation就是randomforest_cross 
 def randomforest_predict(posX,negX,data):       
     train_X = posX+negX
@@ -56,6 +55,7 @@ def randomforest_predict(posX,negX,data):
 
 #keep
 #[[]] to [] 
+
 def Dimensionality_reduction(data):
     dist = []
     for i in data:
@@ -82,13 +82,15 @@ def change_color(predict_list, color0, color1):
     return new_list
 
 #keep
+
 def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_figure_name):
     #positive組的圖
     sns.set(font_scale=2)
+    sns.set_style("ticks")
     pos_data = pos_data[col_name_list]
     pos_gene = []
     #
-    for col1 in tqdm.tqdm_notebook(col_name_list):
+    for col1 in col_name_list:
         gene_gene = []
         X = pos_data[col1].tolist()
         for col2 in col_name_list:
@@ -116,7 +118,7 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
     
     neg_data = neg_data[col_name_list]
     neg_gene = []
-    for col1 in tqdm.tqdm_notebook(col_name_list):
+    for col1 in col_name_list:
         gene_gene = []
         X = neg_data[col1].tolist()
         for col2 in col_name_list:
@@ -134,6 +136,7 @@ def draw_cor_heat_map(pos_data, neg_data, col_name_list, pos_figure_name, neg_fi
     gene.columns=col_name_list
     plt.figure(figsize=(15,15))
     sns.set(font_scale=2)
+    sns.set_style("ticks")
     cmap = sns.diverging_palette(220, 10, sep=10, n=40)
     neg_figure = sns.heatmap(gene, cbar_kws={'ticks': [-1, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0]}, vmin=-1, vmax=1, cmap=cmap)
     plt.savefig(neg_figure_name,   # 儲存圖檔
@@ -197,6 +200,7 @@ def randomforest_cross(posX,negX,data):
 #    print (clf.score(train_X, train_Y))
     return predict_list
 #算指定cluster內準確度
+
 def count_number(cluster_number, preservation_Z_score, cell_cluster,column_name):
     all_num = 0
     pos_num = 0
@@ -307,6 +311,8 @@ def drawlmplot_annotation(pltdata,cluster,Xaxis,Yaxis,Hue,savepath):
     plt.savefig(savepath, bbox_inches='tight',pad_inches=0.0)
     fig=plt.gcf()
     plt.close(fig)
+
+
 def positive_rate(Cluster,Predictlist,cell_UMAP,column_name):
     pr=[]
     for i in Cluster:
@@ -315,11 +321,15 @@ def positive_rate(Cluster,Predictlist,cell_UMAP,column_name):
         pr.append(pri)
     return pr
 
+
 def find_boundary_cluster(cell_UMAP_cluster,Predictlist,Cluster,column_name,save_name_barplot):
     sns.set(font_scale=2)
+    sns.set_style("ticks")
     pr=positive_rate(Cluster, Predictlist, cell_UMAP_cluster,column_name)
     pltdata={"positive_rate":pr,
         column_name:Cluster}    
+    sns.set(font_scale=2)
+    sns.set_style("ticks")
     plt.figure(figsize=(20,6))
     splot = sns.barplot(data=pltdata, x = column_name, y = 'positive_rate', ci = None)
     for p in splot.patches:
@@ -336,6 +346,7 @@ def find_boundary_cluster(cell_UMAP_cluster,Predictlist,Cluster,column_name,save
             bdc.append(index)
     return bdc
 
+
 def prediction_and_ploting(Adata,#adata
                            cell_data,#cell_data
                            cell_UMAP_cluster,#cell_UMAP_cluster
@@ -348,6 +359,7 @@ def prediction_and_ploting(Adata,#adata
                            savedir,
                            module_savedir):
     sns.set(font_scale=2)
+    sns.set_style("ticks")
     Module_cluster_Zscore = pd.read_csv(os.path.join(savedir+str(POS_cluster), 'module_preservation_Zscore.csv'),index_col=0)
     Module_cluster_Zscore = Module_cluster_Zscore.drop(columns=['gold', 'grey'])
 
@@ -432,18 +444,19 @@ def prediction_and_ploting(Adata,#adata
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
     bdata=Adata.copy()
-    bdata=bdata[bdata.obs.leiden.isin(boundaryCstr)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryCstr)]
+    bdata=bdata[bdata.obs.leiden.isin(boundaryC)]
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
+    
     try:
-        velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='jet', style='prediction',
+        velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
                                    style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'positive_UMAP_boundary_annotated.png'))
     except:
         pass
-    velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='jet', style='prediction',
+    velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
                                style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_boundary_annotated.png'))
     try:
         g=plt.figure(figsize=(10,10),dpi=150)
-        g=sns.boxenplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+        g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
         plt.savefig(os.path.join(module_savedir, 'leiden_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
         plt.close()
     except:
@@ -454,18 +467,19 @@ def prediction_and_ploting(Adata,#adata
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
     bdata=Adata.copy()
-    bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryCstr)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryCstr)]
+    bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryC)]
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
+    
     try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='jet',
+        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png'))
     except:
         pass
-    velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='jet',
+    velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
     try:
         g=plt.figure(figsize=(10,10),dpi=150)
-        g=sns.boxenplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+        g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
         plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
         plt.close()
     except:
@@ -477,18 +491,17 @@ def prediction_and_ploting(Adata,#adata
     boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
     bdata=Adata.copy()
-    bdata=bdata[bdata.obs.fixed_cell_number_latent_time_group.isin(boundaryCstr)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryCstr)]
+    bdata=bdata[bdata.obs.fixed_cell_number_latent_time_group.isin(boundaryC)]
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryC)]
+    
     try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='jet',
+        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_UMAP_boundary_annotated.png'))
     except:
         pass
-    velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='jet',
                                style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
     try:
         g=plt.figure(figsize=(10,10),dpi=150)
-        g=sns.boxenplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
         plt.savefig(os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
         plt.close()
     except:
@@ -543,6 +556,7 @@ def prediction_and_ploting(Adata,#adata
     
     plt.figure(figsize=(10,10))
     sns.set(font_scale=1.5)
+    sns.set_style("ticks")
     sns.distplot(neg_pcc_list, label='negative training')
     sns.distplot(pos_pcc_list, label='positive training')
     plt.xlabel('PCC', fontsize=20)
@@ -595,6 +609,7 @@ def prediction_and_ploting(Adata,#adata
     
     plt.figure(figsize=(10,10))
     sns.set(font_scale=1.5)
+    sns.set_style("ticks")
     sns.distplot(neg_pcc_list, label='negative prediction')
     sns.distplot(pos_pcc_list, label='positive prediction')
     plt.xlabel('PCC', fontsize=20)
@@ -615,6 +630,7 @@ def prediction_and_ploting(Adata,#adata
     ACC_PCC.append(result['PCC(positive_rate,preservation_Z_score)'])
     
     return ACC_PCC
+
     
 def predict_packagecopy2(module_gene_list, 
                          pos_sample, 
@@ -764,6 +780,7 @@ def get_emb(adata):
     V_emb = np.array(adata.obsm["velocity_umap"][:, [0,1]])
     return X_emb, V_emb
 
+
 def velocity_stream_scatterplt(adata,pltdata,
                                       x,y,hue,palette,style,style_order,
                                       density,bbox_to_anchor_x,savename):
@@ -786,6 +803,7 @@ def velocity_stream_scatterplt(adata,pltdata,
                 "color": "k" 
     }
     sns.set(font_scale=2)
+    sns.set_style("ticks")
     fig=plt.figure(figsize=(16,12),dpi=150)
     g=plt.streamplot(X_grid[0], X_grid[1], V_grid[0], V_grid[1], **stream_kwargs)
     g=sns.scatterplot(data=pltdata, x=x, y=y, hue=hue,palette=palette,style=style,style_order=style_order,s=196,alpha=0.65,markers=('o','$\u043E$'),ax=fig.gca())
@@ -796,6 +814,7 @@ def velocity_stream_scatterplt(adata,pltdata,
 
 
 #========from scVelo End==============
+
 
 def main():
     #自動化的時候用得上的路徑        savedir="D:/DS100rounds/-"+str(DSpct)+"0pct/round"+str(rounds)+"/"
@@ -825,8 +844,8 @@ def main():
     if not os.path.isdir(result_savedir):
         os.mkdir(result_savedir,755)
         
-    sns.set(font_scale=2)
-    
+    sns.set(font_scale=2,)
+    sns.set_style("ticks")
     os.chdir("./"+foldername)
     scv.pl.velocity_embedding_stream(adata, basis='umap',save="celltype_stream.png",dpi=150)
     scv.pl.velocity_embedding_stream(adata, basis='umap',legend_loc="right",save="celltype_stream_legend_out.png",dpi=150)
@@ -834,7 +853,7 @@ def main():
     scv.pl.velocity_embedding_stream(adata, basis='umap',color=clustering,save="clusters2num_stream.png",dpi=150)
     scv.pl.velocity_embedding_stream(adata, basis='umap',color='leiden',legend_loc="right",save="leiden_stream_legend_out.png",dpi=150)
     scv.pl.velocity_embedding_stream(adata, basis='umap',color='leiden',save="leiden_stream.png",dpi=150)
-    scv.pl.scatter(adata, color='latent_time', color_map='jet', size=80, colorbar=True,save="latent_time_scatterplt.png",figsize=(10,10),dpi=150)
+    scv.pl.scatter(adata, color='latent_time', color_map='turbo', size=80, colorbar=True,save="latent_time_scatterplt.png",figsize=(10,10),dpi=150)
     os.chdir('../')
     
     #drawlmplot_annotation(cell_UMAP_cluster, clustering_size, 'UMAP1', 'UMAP2', clustering,
