@@ -41,6 +41,8 @@ import scvelo as scv
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import norm as normal
 import gc
+import scanpy as scp
+
 #from memory_profiler import profile
 #暫時保留,再加入cross validation就是randomforest_cross 
 def randomforest_predict(posX,negX,data):       
@@ -633,6 +635,301 @@ def prediction_and_ploting(Adata,#adata
     
     return ACC_PCC
 
+
+def prediction_and_ploting_semi(Adata,#adata
+                           cell_data,#cell_data
+                           cell_UMAP_cluster,#cell_UMAP_cluster
+                           cell_leiden_cluster,#cell_leiden_cluster
+                           Clustermethod,#Clustermethod
+                           clustering,#clustering
+                           POS_cluster,#POS_cluster
+                           NEG_cluster,#NEG_cluster#module_savedir
+                           moduleColor,
+                           savedir,
+                           module_savedir):
+    sns.set(font_scale=2)
+    sns.set_style("ticks")
+    Module_cluster_Zscore = pd.read_csv(os.path.join(savedir+str(POS_cluster), 'module_preservation_Zscore.csv'),index_col=0)
+    Module_cluster_Zscore = Module_cluster_Zscore.drop(columns=['gold', 'grey'])
+
+    POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)
+    NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
+
+    target_Module=pd.read_csv(os.path.join(savedir+str(POS_cluster), 'modules', moduleColor+'.csv'),index_col=0)
+    target_Module_genes=list(target_Module.index)
+    target_module_genes_set= set(target_Module_genes)
+    edges = pd.read_table(os.path.join(savedir+str(POS_cluster), 'modules', Clustermethod+'_cluster_'+str(POS_cluster)+'edges.txt'))
+    
+    
+    #nodes = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'nodes.txt')
+    #target_module_genes_set=set()
+    #for i in range(len(nodes.index)):
+    #    if nodes['nodeAttr[nodesPresent, ]'][i] == moduleColor:
+    #        target_module_genes_set.add(nodes['nodeName'][i])
+    #target_Module_genes=list(target_module_genes_set)    
+    #weightthreshold=edges.weight.median()
+    filtered_edges=pd.DataFrame(columns=['fromNode','toNode','weight'])
+    
+    for i in range(len(edges.index)):
+        if edges.fromNode[i] in target_module_genes_set and edges.toNode[i] in target_module_genes_set:
+            filtered_edges.loc[len(filtered_edges.index)]=[edges.fromNode[i],edges.toNode[i],edges.weight[i]]
+    target_module_genes_set
+    target_Module_c_list=set()    
+    #篩選edge權重
+    for i in range(len(filtered_edges.index)):    
+        if (filtered_edges.weight[i] >= (filtered_edges.weight.max()/2)) :#權重在這裡
+            target_Module_c_list.add(filtered_edges.fromNode[i])
+            target_Module_c_list.add(filtered_edges.toNode[i])
+    target_Module_c_list=list(target_Module_c_list)
+    #del(edges,filtered_edges)
+        
+    if len(POS.index) >= len(NEG.index):
+        min_sample_count=len(NEG.index)
+    else:
+        min_sample_count=len(POS.index)
+
+    POS_training=POS.sample(n=min_sample_count, axis=0)
+    NEG_training=NEG.sample(n=min_sample_count, axis=0)
+                                #第一個引數輸入要訓練的feature
+    result = predict_packagecopy2(target_Module_genes,
+                               POS_training, 
+                               NEG_training, 
+                               cell_data, #cell data, after preprocessing!!,cell-gene matrix
+                               cell_UMAP_cluster,#細胞對應cluster
+                               list(range(0,len(Module_cluster_Zscore.index))),#cluster列表 
+                               list(Module_cluster_Zscore[moduleColor]), 
+                               str(moduleColor),
+                               os.path.join(module_savedir, moduleColor+'_PC'+str(POS_cluster)+'_NC'+str(NEG_cluster)+'.png'),
+                               cell_leiden_cluster,
+                               os.path.join(module_savedir, "barplot_of_pos_rate_on_leiden_res2.png")
+                              )
+    predict_list=result['predict_list']    
+    #作圖loop區域,後續的圖
+    pos_cluster_neg_cluster_cell_list=[]
+    for i in range(len(cell_UMAP_cluster)):
+        if cell_UMAP_cluster[clustering][i] == POS_cluster:
+            pos_cluster_neg_cluster_cell_list.append('positive_cluster_'+str(POS_cluster))
+        elif cell_UMAP_cluster[clustering][i] == NEG_cluster:
+            pos_cluster_neg_cluster_cell_list.append('negative_cluster_'+str(NEG_cluster))
+        else:
+            pos_cluster_neg_cluster_cell_list.append('other')
+    
+    cell_UMAP_cluster['training_clusters']=pos_cluster_neg_cluster_cell_list
+        
+    sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='training_clusters',fit_reg=False, legend=True, legend_out=True,size=14,hue_order=(sorted(list(set(cell_UMAP_cluster['training_clusters'])))))
+    plt.savefig(os.path.join(module_savedir, 'training_cluster_UMAP.png'), bbox_inches='tight',pad_inches=0.0)
+    fig=plt.gcf()
+    plt.close(fig)
+    #predict_listtest_to_color = change_color(predict_listtest, '#808080', '#FF0000')
+    cell_UMAP_cluster['prediction']=predict_list
+    #標示出predict為pos和neg的細胞分布 UMAP
+    #SAVE!
+    sns.lmplot(data=cell_UMAP_cluster, x='UMAP1', y='UMAP2', hue='prediction',fit_reg=False, legend=True, legend_out=True,size=14)
+    plt.savefig(os.path.join(module_savedir, 'positive_UMAP.png'), bbox_inches='tight',               # 去除座標軸占用的空間
+                pad_inches=0.0)
+    fig=plt.gcf()
+    plt.close(fig)
+    functionOption_boundary=''
+    while functionOption_boundary!=0:
+        functionOption_boundary=int(input('all cell type and certain latent time group activation scatterplot:1\n, '+
+                                      'certain cell type activation and latent time groups activation  scatterplot:2\n'+
+                                      'quit:0\n'))
+        if functionOption_boundary==1:            
+            boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
+            print('enter fixed time latent time groups for display:\n')
+            try:
+                boundaryC = []
+              
+                while True:
+                    boundaryC.append(int(input()))
+                      
+                # if the input is not-integer, just print the list
+            except:
+                print(boundaryC)
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
+            boundaryCstr=[str(int) for int in boundaryC]
+            bdata=Adata.copy()
+            bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryC)]
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]    
+            try:
+                velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                           style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png'))
+            except:
+                pass
+            velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                       style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+            try:
+                g=plt.figure(figsize=(10,10),dpi=150)
+                g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+                plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
+                plt.close()
+            except:
+                pass
+            
+        if functionOption_boundary==2:
+            
+            boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
+            print('enter fixed time latent time groups for display:\n')
+            try:
+                boundaryC = []
+              
+                while True:
+                    boundaryC.append(int(input()))
+                      
+                # if the input is not-integer, just print the list
+            except:
+                print(boundaryC)
+            celltypeC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
+            print('enter cell types for display:\n')
+            try:
+                celltypeC = []
+              
+                while True:
+                    celltypeC.append(int(input()))
+                      
+                # if the input is not-integer, just print the list
+            except:
+                print(celltypeC)
+            
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(celltypeC)]
+            boundaryCstr=[str(int) for int in boundaryC]
+            bdata=Adata.copy()
+            bdata=bdata[bdata.obs.cell_type.isin(celltypeC)]
+            bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryC)]
+            boundaryUMAP=boundaryUMAP[boundaryUMAP.fixed_time_latent_time_group.isin(boundaryC)]    
+            try:
+                velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                           style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png'))
+            except:
+                pass
+            velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                       style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+            try:
+                g=plt.figure(figsize=(10,10),dpi=150)
+                g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+                plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
+                plt.close()
+            except:
+                pass
+    if 1>0:  #Draw heatmap
+        ####whole module genes heatmap
+        moduleGenePosHeatmap=sns.clustermap(data=(POS_training[target_Module_genes].T),xticklabels=False,yticklabels=True,
+                   figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)),method='ward')
+        fixed_gene_list = list(moduleGenePosHeatmap.data2d.index)
+        plt.savefig(os.path.join(module_savedir, 'pos_module_gene_heatmap.png'), bbox_inches='tight',pad_inches=0.0)
+        fig=plt.gcf()
+        plt.close(fig)    
+        NEG_moduleGeneOrdered=NEG_training[target_Module_genes]
+        NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
+        
+        plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)))
+        moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels=True)
+        plt.savefig(os.path.join(module_savedir, 'neg_module_gene_heatmap.png'), bbox_inches='tight',pad_inches=0.0)    
+        fig=plt.gcf()
+        plt.close(fig)
+        #訓練資料
+     
+        #training data (whole module gene) PCC map
+        pos_neg_cor = draw_cor_heat_map(POS_training, NEG_training, fixed_gene_list,
+                                   os.path.join(module_savedir, 'training_module_PCC_heatmap_PC'+str(POS_cluster)+'module_'+moduleColor+'.png'),
+                                   os.path.join(module_savedir, 'training_module_PCC_heatmap_NC'+str(NEG_cluster)+'module_'+moduleColor+'.png'))
+        pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
+        neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
+        
+        
+        jcounter=0
+        for listresult in pos_pcc_list:
+            if listresult == 1:
+                jcounter+=1
+             
+        for i in range(jcounter):
+            pos_pcc_list.remove(1)
+            
+        jcounter=0
+        for listresult in neg_pcc_list:
+            if listresult == 1:
+                jcounter+=1
+                
+        for i in range(jcounter):
+            neg_pcc_list.remove(1)
+        
+        plt.figure(figsize=(10,10))
+        sns.set(font_scale=1.5)
+        sns.set_style("ticks")
+        sns.distplot(neg_pcc_list, label='negative training')
+        sns.distplot(pos_pcc_list, label='positive training')
+        plt.xlabel('PCC', fontsize=20)
+        plt.ylabel('Density', fontsize=20)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(module_savedir, 'training_module_PCC.png'),   # 儲存圖檔
+                    bbox_inches='tight',               # 去除座標軸占用的空間
+                    pad_inches=0.0)
+        fig=plt.gcf()
+        plt.close(fig)    
+        gene_data = cell_data[target_Module_genes]
+        
+        pos = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==1].index)]
+        neg = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==0].index)]
+        
+        #breakpoint()
+        #提醒!要把檔名的cluster拿掉
+        
+        
+        
+        
+        ##predict結果的PCC
+        #prediction result data PCC map
+        
+        pos_neg_cor = draw_cor_heat_map(pos, neg, fixed_gene_list,
+                                   os.path.join(module_savedir, 'prediction_module_PCC_heatmap_pos'+str(POS_cluster)+'.png'),
+                                   os.path.join(module_savedir, 'prediction_module_PCC_heatmap_neg'+str(NEG_cluster)+'.png'))
+        
+        #breakpoint()
+        pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
+        neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
+        
+        ## 
+        jcounter=0
+        for listresult in pos_pcc_list:
+            if listresult == 1:
+                jcounter+=1     
+        for i in range(jcounter):
+            pos_pcc_list.remove(1)
+            
+        jcounter=0
+        for listresult in neg_pcc_list:
+            if listresult == 1:
+                jcounter+=1        
+        for i in range(jcounter):
+            neg_pcc_list.remove(1)
+        
+        plt.figure(figsize=(10,10))
+        sns.set(font_scale=1.5)
+        sns.set_style("ticks")
+        sns.distplot(neg_pcc_list, label='negative prediction')
+        sns.distplot(pos_pcc_list, label='positive prediction')
+        plt.xlabel('PCC', fontsize=20)
+        plt.ylabel('Density', fontsize=20)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(module_savedir, 'prediction_module_PCC.png'),   # 儲存圖檔
+                    bbox_inches='tight',               # 去除座標軸占用的空間
+                    pad_inches=0.0)
+        fig=plt.gcf()
+        plt.close(fig)
+    #del(gene_data,moduleGeneNegHeatmap,moduleGenePosHeatmap,neg,NEG_moduleGeneOrdered,neg_pcc_list,NEG_training,pos,pos_cluster_neg_cluster_cell_list,pos_neg_cor,pos_pcc_list,POS_training,target_Module)
+    #gc.collect()
+    #breakpoint()
+    ACC_PCC=result['ACC_mean_std']
+    ACC_PCC.append(result['PCC(positive_rate,preservation_Z_score)'])
+    
+    return ACC_PCC
+
     
 def predict_packagecopy2(module_gene_list, 
                          pos_sample, 
@@ -842,13 +1139,18 @@ def main():
     cell_leiden_cluster = list(set(cell_UMAP_cluster['leiden']))
     adata.obs['cell_type'] = pd.Categorical(list(adata.obs.clusters2num))
     cell_UMAP_cluster['latent_time'] = adata.obs.latent_time
+    scp.tl.rank_genes_groups(adata, 'cell_type', method='wilcoxon')
+    
+    DEGinGroups=pd.DataFrame(adata.uns['rank_genes_groups']['names'][0:25])
     
     if not os.path.isdir(result_savedir):
         os.mkdir(result_savedir,755)
         
+
+    os.chdir("./"+foldername)
+    scp.pl.rank_genes_groups(adata,n_genes=25,shery=False,save="wilcoxon_DEG.png",dpi=150)
     sns.set(font_scale=2,)
     sns.set_style("ticks")
-    os.chdir("./"+foldername)
     scv.pl.velocity_embedding_stream(adata, basis='umap',save="celltype_stream.png",dpi=150)
     scv.pl.velocity_embedding_stream(adata, basis='umap',legend_loc="right",save="celltype_stream_legend_out.png",dpi=150)
     scv.pl.velocity_embedding_stream(adata, basis='umap',color=clustering,legend_loc="right",save="clusters2num_stream_legend_out.png",dpi=150)
@@ -931,34 +1233,70 @@ def main():
             pass
     #作圖loop區域,前段 #提醒! 要再加入後續的做圖code
     ACC_mean_std_DF=pd.DataFrame(columns=['mean','std','PCC_of_positive_rate_and_preservation_Z_score'])
-    for i in training_group_DF.index:
-        POS_cluster=training_group_DF.loc[i]['POS']
-        NEG_cluster=training_group_DF.loc[i]['NEG']
-        moduleColor=training_group_DF.loc[i]['Color']
-        
-        module_savedir=os.path.join(result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor, "")
-        
-        result_acc_mean_std=prediction_and_ploting(Adata=adata,
-                                                   cell_data=cell_data,
-                                                   cell_UMAP_cluster=cell_UMAP_cluster,
-                                                   cell_leiden_cluster=cell_leiden_cluster,
-                                                   Clustermethod=Clustermethod,
-                                                   clustering=clustering,
-                                                   POS_cluster=POS_cluster, NEG_cluster=NEG_cluster,
-                                                   moduleColor=moduleColor,savedir=savedir,
-                                                   module_savedir=module_savedir)
-        ACC_mean_std_DF.loc[len(ACC_mean_std_DF.index)]=result_acc_mean_std#準確率平均[0]跟標準差[1]
-        #breakpoint()
-        gc.collect()
-    training_group_DF=pd.concat([training_group_DF, ACC_mean_std_DF], axis=1)#把測試組合與其準確率跟準確率標準差合併
     
-    fig=plt.figure(figsize=(10,10),dpi=150)
-    fig= sns.swarmplot(training_group_DF['PCC_of_positive_rate_and_preservation_Z_score'],color=".2",size=12)
-    fig= sns.boxplot(training_group_DF['PCC_of_positive_rate_and_preservation_Z_score'])
-    plt.savefig(os.path.join(result_savedir, "PCC_of_positive_rate_and_preservation_Z_score.png"), bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
-    fig=plt.gcf()
-    plt.close(fig)
-    #breakpoint()
-
+    functionOption=''
+    while functionOption!=0:
+        functionOption=int(input('1)auto\n2)semi\n0)quit:'))
+        if functionOption==1:
+            for i in training_group_DF.index:
+                POS_cluster=training_group_DF.loc[i]['POS']
+                NEG_cluster=training_group_DF.loc[i]['NEG']
+                moduleColor=training_group_DF.loc[i]['Color']
+                
+                module_savedir=os.path.join(result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor, "")
+                
+                result_acc_mean_std=prediction_and_ploting(Adata=adata,
+                                                           cell_data=cell_data,
+                                                           cell_UMAP_cluster=cell_UMAP_cluster,
+                                                           cell_leiden_cluster=cell_leiden_cluster,
+                                                           Clustermethod=Clustermethod,
+                                                           clustering=clustering,
+                                                           POS_cluster=POS_cluster, NEG_cluster=NEG_cluster,
+                                                           moduleColor=moduleColor,savedir=savedir,
+                                                           module_savedir=module_savedir)
+                ACC_mean_std_DF.loc[len(ACC_mean_std_DF.index)]=result_acc_mean_std#準確率平均[0]跟標準差[1]
+                #breakpoint()
+                gc.collect()
+            training_group_DF=pd.concat([training_group_DF, ACC_mean_std_DF], axis=1)#把測試組合與其準確率跟準確率標準差合併
+            
+            fig=plt.figure(figsize=(10,10),dpi=150)
+            fig= sns.swarmplot(training_group_DF['PCC_of_positive_rate_and_preservation_Z_score'],color=".2",size=12)
+            fig= sns.boxplot(training_group_DF['PCC_of_positive_rate_and_preservation_Z_score'])
+            plt.savefig(os.path.join(result_savedir, "PCC_of_positive_rate_and_preservation_Z_score.png"), bbox_inches='tight',pad_inches=0.0)# 去除座標軸占用的空間
+            fig=plt.gcf()
+            plt.close(fig)
+            #breakpoint()
+            FEA_geneModule=pd.DataFrame(columns=['POS','Color'])
+            for i in list(set(training_group_DF['moduleName'])):
+                for j in training_group_DF.index:
+                    if training_group_DF['moduleName'][j] == i :
+                        FEA_geneModule.loc[len(FEA_geneModule.index)]=[training_group_DF['POS'][j],training_group_DF['Color'][j]]
+                        break
+            moduleGenes=[]
+            for i in FEA_geneModule.index:
+                    target_Module=pd.read_csv(os.path.join(savedir+str(FEA_geneModule['POS'][i]), 'modules', FEA_geneModule['Color'][i]+'.csv'),index_col=0)
+                    target_Module_genes=list(target_Module.index)
+                    #target_module_genes_set= set(target_Module_genes)
+                    moduleGenes.append(target_Module_genes)
+            moduleGenesDF=pd.DataFrame(moduleGenes).T
+            moduleGenesDF.columns=list(set(training_group_DF['moduleName']))
+            moduleGenesDF.to_csv(os.path.join(result_savedir, "moduleGenesDF.csv"),sep='\t')
+            DEGinGroups.to_csv(os.path.join(result_savedir, "DEGinGroups.csv"),sep='\t')
+            
+        if functionOption==2:
+            POS_cluster=int(input('POS: '))
+            NEG_cluster=int(input('NEG: '))
+            moduleColor=str(input('moduleColor: '))
+            module_savedir=os.path.join(result_savedir+"PC"+str(POS_cluster)+"NC"+str(NEG_cluster)+"_"+moduleColor, "")
+                
+            result_acc_mean_std=prediction_and_ploting_semi(Adata=adata,
+                                                        cell_data=cell_data,
+                                                        cell_UMAP_cluster=cell_UMAP_cluster,
+                                                        cell_leiden_cluster=cell_leiden_cluster,
+                                                        Clustermethod=Clustermethod,
+                                                        clustering=clustering,
+                                                        POS_cluster=POS_cluster, NEG_cluster=NEG_cluster,
+                                                        moduleColor=moduleColor,savedir=savedir,
+                                                        module_savedir=module_savedir)
 if __name__=="__main__":
     main()
