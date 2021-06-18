@@ -1120,7 +1120,7 @@ def main():
     #data資料夾位置的根目錄
     os.chdir("C:/Users/user/Desktop/test/scanpy")
     
-    foldername = "scv_pancreas_prep"## datafolder
+    foldername = input('Enter foldername:') #"scv_pancreas_prep" or "scv_pancreas_impute"## datafolder
     Clustermethod = "celltype"
     clustering = "cell_type"
     
@@ -1141,14 +1141,14 @@ def main():
     cell_UMAP_cluster['latent_time'] = adata.obs.latent_time
     scp.tl.rank_genes_groups(adata, 'cell_type', method='wilcoxon')
     
-    DEGinGroups=pd.DataFrame(adata.uns['rank_genes_groups']['names'][0:25])
+    DEGinGroups=pd.DataFrame(adata.uns['rank_genes_groups']['names'][0:50])
     
     if not os.path.isdir(result_savedir):
         os.mkdir(result_savedir,755)
         
 
     os.chdir("./"+foldername)
-    scp.pl.rank_genes_groups(adata,n_genes=25,shery=False,save="wilcoxon_DEG.png",dpi=150)
+    scp.pl.rank_genes_groups(adata,n_genes=50,shery=False,save="wilcoxon_DEG.png",dpi=150)
     sns.set(font_scale=2,)
     sns.set_style("ticks")
     scv.pl.velocity_embedding_stream(adata, basis='umap',save="celltype_stream.png",dpi=150)
@@ -1281,7 +1281,7 @@ def main():
             moduleGenesDF=pd.DataFrame(moduleGenes).T
             moduleGenesDF.columns=list(set(training_group_DF['moduleName']))
             moduleGenesDF.to_csv(os.path.join(result_savedir, "moduleGenesDF.csv"),sep='\t')
-            DEGinGroups.to_csv(os.path.join(result_savedir, "DEGinGroups.csv"),sep='\t')
+            
             
         if functionOption==2:
             POS_cluster=int(input('POS: '))
@@ -1298,5 +1298,8 @@ def main():
                                                         POS_cluster=POS_cluster, NEG_cluster=NEG_cluster,
                                                         moduleColor=moduleColor,savedir=savedir,
                                                         module_savedir=module_savedir)
+            
+            
+        DEGinGroups.to_csv(os.path.join(result_savedir, "DEG_50inGroups.csv"),sep='\t')
 if __name__=="__main__":
     main()
