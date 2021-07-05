@@ -1140,15 +1140,15 @@ def main():
     adata.obs['cell_type'] = pd.Categorical(list(adata.obs.clusters2num))
     cell_UMAP_cluster['latent_time'] = adata.obs.latent_time
     scp.tl.rank_genes_groups(adata, 'cell_type', method='wilcoxon')
-    
-    DEGinGroups=pd.DataFrame(adata.uns['rank_genes_groups']['names'][0:50])
+    DEGnumbers = int(input('Enter DEGnumbers:'))
+    DEGinGroups=pd.DataFrame(adata.uns['rank_genes_groups']['names'][0:DEGnumbers])
     
     if not os.path.isdir(result_savedir):
         os.mkdir(result_savedir,755)
         
 
     os.chdir("./"+foldername)
-    scp.pl.rank_genes_groups(adata,n_genes=50,shery=False,save="wilcoxon_DEG.png",dpi=150)
+    scp.pl.rank_genes_groups(adata,n_genes=DEGnumbers,shery=False,save="wilcoxon_DEG.png",dpi=150)
     sns.set(font_scale=2,)
     sns.set_style("ticks")
     scv.pl.velocity_embedding_stream(adata, basis='umap',save="celltype_stream.png",dpi=150)
@@ -1300,6 +1300,6 @@ def main():
                                                         module_savedir=module_savedir)
             
             
-        DEGinGroups.to_csv(os.path.join(result_savedir, "DEG_50inGroups.csv"),sep='\t')
+        DEGinGroups.to_csv(os.path.join(result_savedir, "DEG_"+str(DEGnumbers)+"inGroups.csv"),sep='\t')
 if __name__=="__main__":
     main()
