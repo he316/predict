@@ -367,34 +367,40 @@ def prediction_and_ploting(Adata,#adata
 
     POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)
     NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
-
-    target_Module=pd.read_csv(os.path.join(savedir+str(POS_cluster), 'modules', moduleColor+'.csv'),index_col=0)
-    target_Module_genes=list(target_Module.index)
+    if 1<0:
+        modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result','sorted_moduleGenesDFTab.csv'),sep='\t')
+        #breakpoint()
+        selected_modulegene=modulegene[str('cluster'+str(POS_cluster)+'_'+moduleColor)]
+        target_Module_genes=selected_modulegene[0:int(len(set(selected_modulegene))*0.1)]
+    else:
+        target_Module=pd.read_csv(os.path.join(savedir+str(POS_cluster), 'modules', moduleColor+'.csv'),index_col=0)
+        target_Module_genes=list(target_Module.index)
     target_module_genes_set= set(target_Module_genes)
-    edges = pd.read_table(os.path.join(savedir+str(POS_cluster), 'modules', Clustermethod+'_cluster_'+str(POS_cluster)+'edges.txt'))
-    
-    
-    #nodes = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'nodes.txt')
-    #target_module_genes_set=set()
-    #for i in range(len(nodes.index)):
-    #    if nodes['nodeAttr[nodesPresent, ]'][i] == moduleColor:
-    #        target_module_genes_set.add(nodes['nodeName'][i])
-    #target_Module_genes=list(target_module_genes_set)    
-    #weightthreshold=edges.weight.median()
-    filtered_edges=pd.DataFrame(columns=['fromNode','toNode','weight'])
-    
-    for i in range(len(edges.index)):
-        if edges.fromNode[i] in target_module_genes_set and edges.toNode[i] in target_module_genes_set:
-            filtered_edges.loc[len(filtered_edges.index)]=[edges.fromNode[i],edges.toNode[i],edges.weight[i]]
-    target_module_genes_set
-    target_Module_c_list=set()    
-    #篩選edge權重
-    for i in range(len(filtered_edges.index)):    
-        if (filtered_edges.weight[i] >= (filtered_edges.weight.max()/2)) :#權重在這裡
-            target_Module_c_list.add(filtered_edges.fromNode[i])
-            target_Module_c_list.add(filtered_edges.toNode[i])
-    target_Module_c_list=list(target_Module_c_list)
-    #del(edges,filtered_edges)
+    if 1<0 :
+        edges = pd.read_table(os.path.join(savedir+str(POS_cluster), 'modules', Clustermethod+'_cluster_'+str(POS_cluster)+'edges.txt'))
+        
+        
+        #nodes = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'nodes.txt')
+        #target_module_genes_set=set()
+        #for i in range(len(nodes.index)):
+        #    if nodes['nodeAttr[nodesPresent, ]'][i] == moduleColor:
+        #        target_module_genes_set.add(nodes['nodeName'][i])
+        #target_Module_genes=list(target_module_genes_set)    
+        #weightthreshold=edges.weight.median()
+        filtered_edges=pd.DataFrame(columns=['fromNode','toNode','weight'])
+        
+        for i in range(len(edges.index)):
+            if edges.fromNode[i] in target_module_genes_set and edges.toNode[i] in target_module_genes_set:
+                filtered_edges.loc[len(filtered_edges.index)]=[edges.fromNode[i],edges.toNode[i],edges.weight[i]]
+        target_module_genes_set
+        target_Module_c_list=set()    
+        #篩選edge權重
+        for i in range(len(filtered_edges.index)):    
+            if (filtered_edges.weight[i] >= (filtered_edges.weight.max()/2)) :#權重在這裡
+                target_Module_c_list.add(filtered_edges.fromNode[i])
+                target_Module_c_list.add(filtered_edges.toNode[i])
+        target_Module_c_list=list(target_Module_c_list)
+        #del(edges,filtered_edges)
         
     if len(POS.index) >= len(NEG.index):
         min_sample_count=len(NEG.index)
@@ -442,12 +448,12 @@ def prediction_and_ploting(Adata,#adata
                 pad_inches=0.0)
     fig=plt.gcf()
     plt.close(fig)
-    boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, cell_leiden_cluster, 'leiden', os.path.join(module_savedir, "barplot_of_pos_rate_on_leiden_res2.png"))
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
+    boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_cell_type.png"))
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
     boundaryCstr=[str(int) for int in boundaryC]
     bdata=Adata.copy()
-    bdata=bdata[bdata.obs.leiden.isin(boundaryC)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.leiden.isin(boundaryC)]
+    bdata=bdata[bdata.obs.cell_type.isin(boundaryC)]
+    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
     
     try:
         velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
@@ -459,7 +465,7 @@ def prediction_and_ploting(Adata,#adata
     try:
         g=plt.figure(figsize=(10,10),dpi=150)
         g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
-        plt.savefig(os.path.join(module_savedir, 'leiden_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
+        plt.savefig(os.path.join(module_savedir, 'cell_type_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
         plt.close()
     except:
         pass
@@ -533,105 +539,102 @@ def prediction_and_ploting(Adata,#adata
     fig=plt.gcf()
     plt.close(fig)
     #訓練資料
- 
-    #training data (whole module gene) PCC map
-    pos_neg_cor = draw_cor_heat_map(POS_training, NEG_training, fixed_gene_list,
-                               os.path.join(module_savedir, 'training_module_PCC_heatmap_PC'+str(POS_cluster)+'module_'+moduleColor+'.png'),
-                               os.path.join(module_savedir, 'training_module_PCC_heatmap_NC'+str(NEG_cluster)+'module_'+moduleColor+'.png'))
-    pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
-    neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
-    
-    
-    jcounter=0
-    for listresult in pos_pcc_list:
-        if listresult == 1:
-            jcounter+=1
-         
-    for i in range(jcounter):
-        pos_pcc_list.remove(1)
+    if 1>0:
+        #training data (whole module gene) PCC map
+        pos_neg_cor = draw_cor_heat_map(POS_training, NEG_training, fixed_gene_list,
+                                   os.path.join(module_savedir, 'training_module_PCC_heatmap_PC'+str(POS_cluster)+'module_'+moduleColor+'.png'),
+                                   os.path.join(module_savedir, 'training_module_PCC_heatmap_NC'+str(NEG_cluster)+'module_'+moduleColor+'.png'))
+        pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
+        neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
+        
         
     jcounter=0
     for listresult in neg_pcc_list:
         if listresult == 1:
             jcounter+=1
             
-    for i in range(jcounter):
-        neg_pcc_list.remove(1)
-    
-    plt.figure(figsize=(10,10))
-    sns.set(font_scale=1.5)
-    sns.set_style("ticks")
-    sns.distplot(neg_pcc_list, label='negative training')
-    sns.distplot(pos_pcc_list, label='positive training')
-    plt.xlabel('PCC', fontsize=20)
-    plt.ylabel('Density', fontsize=20)
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(module_savedir, 'training_module_PCC.png'),   # 儲存圖檔
-                bbox_inches='tight',               # 去除座標軸占用的空間
-                pad_inches=0.0)
-    fig=plt.gcf()
-    plt.close(fig)    
-    gene_data = cell_data[target_Module_genes]
-    
-    pos = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==1].index)]
-    neg = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==0].index)]
-    
-    #breakpoint()
-    #提醒!要把檔名的cluster拿掉
-    
-    
-    
-    
-    ##predict結果的PCC
-    #prediction result data PCC map
-    
-    pos_neg_cor = draw_cor_heat_map(pos, neg, fixed_gene_list,
-                               os.path.join(module_savedir, 'prediction_module_PCC_heatmap_pos'+str(POS_cluster)+'.png'),
-                               os.path.join(module_savedir, 'prediction_module_PCC_heatmap_neg'+str(NEG_cluster)+'.png'))
-    
-    #breakpoint()
-    pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
-    neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
-    
-    ## 
-    jcounter=0
-    for listresult in pos_pcc_list:
-        if listresult == 1:
-            jcounter+=1     
-    for i in range(jcounter):
-        pos_pcc_list.remove(1)
+        jcounter=0
+        for listresult in neg_pcc_list:
+            if listresult == 1:
+                jcounter+=1
+                
+        for i in range(jcounter):
+            neg_pcc_list.remove(1)
         
-    jcounter=0
-    for listresult in neg_pcc_list:
-        if listresult == 1:
-            jcounter+=1        
-    for i in range(jcounter):
-        neg_pcc_list.remove(1)
-    
-    plt.figure(figsize=(10,10))
-    sns.set(font_scale=1.5)
-    sns.set_style("ticks")
-    sns.distplot(neg_pcc_list, label='negative prediction')
-    sns.distplot(pos_pcc_list, label='positive prediction')
-    plt.xlabel('PCC', fontsize=20)
-    plt.ylabel('Density', fontsize=20)
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(module_savedir, 'prediction_module_PCC.png'),   # 儲存圖檔
-                bbox_inches='tight',               # 去除座標軸占用的空間
-                pad_inches=0.0)
-    fig=plt.gcf()
-    plt.close(fig)
-    #del(gene_data,moduleGeneNegHeatmap,moduleGenePosHeatmap,neg,NEG_moduleGeneOrdered,neg_pcc_list,NEG_training,pos,pos_cluster_neg_cluster_cell_list,pos_neg_cor,pos_pcc_list,POS_training,target_Module)
-    #gc.collect()
-    #breakpoint()
-    ACC_PCC=result['ACC_mean_std']
-    ACC_PCC.append(result['PCC(positive_rate,preservation_Z_score)'])
+        plt.figure(figsize=(10,10))
+        sns.set(font_scale=1.5)
+        sns.set_style("ticks")
+        sns.distplot(neg_pcc_list, label='negative training')
+        sns.distplot(pos_pcc_list, label='positive training')
+        plt.xlabel('PCC', fontsize=20)
+        plt.ylabel('Density', fontsize=20)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(module_savedir, 'training_module_PCC.png'),   # 儲存圖檔
+                    bbox_inches='tight',               # 去除座標軸占用的空間
+                    pad_inches=0.0)
+        fig=plt.gcf()
+        plt.close(fig)    
+        gene_data = cell_data[target_Module_genes]
+        
+        pos = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==1].index)]
+        neg = gene_data[gene_data.index.isin(cell_UMAP_cluster[cell_UMAP_cluster['prediction']==0].index)]
+        
+        #breakpoint()
+        #提醒!要把檔名的cluster拿掉
+        
+        
+        
+        
+        ##predict結果的PCC
+        #prediction result data PCC map
+        
+        pos_neg_cor = draw_cor_heat_map(pos, neg, fixed_gene_list,
+                                   os.path.join(module_savedir, 'prediction_module_PCC_heatmap_pos'+str(POS_cluster)+'.png'),
+                                   os.path.join(module_savedir, 'prediction_module_PCC_heatmap_neg'+str(NEG_cluster)+'.png'))
+        
+        #breakpoint()
+        pos_pcc_list = Dimensionality_reduction(pos_neg_cor[0])
+        neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
+        
+        ## 
+        jcounter=0
+        for listresult in pos_pcc_list:
+            if listresult == 1:
+                jcounter+=1     
+        for i in range(jcounter):
+            pos_pcc_list.remove(1)
+            
+        jcounter=0
+        for listresult in neg_pcc_list:
+            if listresult == 1:
+                jcounter+=1        
+        for i in range(jcounter):
+            neg_pcc_list.remove(1)
+        
+        plt.figure(figsize=(10,10))
+        sns.set(font_scale=1.5)
+        sns.set_style("ticks")
+        sns.distplot(neg_pcc_list, label='negative prediction')
+        sns.distplot(pos_pcc_list, label='positive prediction')
+        plt.xlabel('PCC', fontsize=20)
+        plt.ylabel('Density', fontsize=20)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(module_savedir, 'prediction_module_PCC.png'),   # 儲存圖檔
+                    bbox_inches='tight',               # 去除座標軸占用的空間
+                    pad_inches=0.0)
+        fig=plt.gcf()
+        plt.close(fig)
+        #del(gene_data,moduleGeneNegHeatmap,moduleGenePosHeatmap,neg,NEG_moduleGeneOrdered,neg_pcc_list,NEG_training,pos,pos_cluster_neg_cluster_cell_list,pos_neg_cor,pos_pcc_list,POS_training,target_Module)
+        #gc.collect()
+        #breakpoint()
+        ACC_PCC=result['ACC_mean_std']
+        ACC_PCC.append(result['PCC(positive_rate,preservation_Z_score)'])
     
     return ACC_PCC
 
@@ -658,30 +661,31 @@ def prediction_and_ploting_semi(Adata,#adata
     target_Module=pd.read_csv(os.path.join(savedir+str(POS_cluster), 'modules', moduleColor+'.csv'),index_col=0)
     target_Module_genes=list(target_Module.index)
     target_module_genes_set= set(target_Module_genes)
-    edges = pd.read_table(os.path.join(savedir+str(POS_cluster), 'modules', Clustermethod+'_cluster_'+str(POS_cluster)+'edges.txt'))
-    
-    
-    #nodes = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'nodes.txt')
-    #target_module_genes_set=set()
-    #for i in range(len(nodes.index)):
-    #    if nodes['nodeAttr[nodesPresent, ]'][i] == moduleColor:
-    #        target_module_genes_set.add(nodes['nodeName'][i])
-    #target_Module_genes=list(target_module_genes_set)    
-    #weightthreshold=edges.weight.median()
-    filtered_edges=pd.DataFrame(columns=['fromNode','toNode','weight'])
-    
-    for i in range(len(edges.index)):
-        if edges.fromNode[i] in target_module_genes_set and edges.toNode[i] in target_module_genes_set:
-            filtered_edges.loc[len(filtered_edges.index)]=[edges.fromNode[i],edges.toNode[i],edges.weight[i]]
-    target_module_genes_set
-    target_Module_c_list=set()    
-    #篩選edge權重
-    for i in range(len(filtered_edges.index)):    
-        if (filtered_edges.weight[i] >= (filtered_edges.weight.max()/2)) :#權重在這裡
-            target_Module_c_list.add(filtered_edges.fromNode[i])
-            target_Module_c_list.add(filtered_edges.toNode[i])
-    target_Module_c_list=list(target_Module_c_list)
-    #del(edges,filtered_edges)
+    if 1<0:
+        edges = pd.read_table(os.path.join(savedir+str(POS_cluster), 'modules', Clustermethod+'_cluster_'+str(POS_cluster)+'edges.txt'))
+        
+        breakpoint()
+        #nodes = pd.read_table(savedir+str(POS_cluster)+'/modules/'+'Leiden_cluster_'+str(POS_cluster)+'nodes.txt')
+        #target_module_genes_set=set()
+        #for i in range(len(nodes.index)):
+        #    if nodes['nodeAttr[nodesPresent, ]'][i] == moduleColor:
+        #        target_module_genes_set.add(nodes['nodeName'][i])
+        #target_Module_genes=list(target_module_genes_set)    
+        #weightthreshold=edges.weight.median()
+        filtered_edges=pd.DataFrame(columns=['fromNode','toNode','weight'])
+        
+        for i in range(len(edges.index)):
+            if edges.fromNode[i] in target_module_genes_set and edges.toNode[i] in target_module_genes_set:
+                filtered_edges.loc[len(filtered_edges.index)]=[edges.fromNode[i],edges.toNode[i],edges.weight[i]]
+        target_module_genes_set
+        target_Module_c_list=set()    
+        #篩選edge權重
+        for i in range(len(filtered_edges.index)):    
+            if (filtered_edges.weight[i] >= (filtered_edges.weight.max()/2)) :#權重在這裡
+                target_Module_c_list.add(filtered_edges.fromNode[i])
+                target_Module_c_list.add(filtered_edges.toNode[i])
+        target_Module_c_list=list(target_Module_c_list)
+        #del(edges,filtered_edges)
         
     if len(POS.index) >= len(NEG.index):
         min_sample_count=len(NEG.index)
@@ -691,6 +695,7 @@ def prediction_and_ploting_semi(Adata,#adata
     POS_training=POS.sample(n=min_sample_count, axis=0)
     NEG_training=NEG.sample(n=min_sample_count, axis=0)
                                 #第一個引數輸入要訓練的feature
+    #breakpoint()
     result = predict_packagecopy2(target_Module_genes,
                                POS_training, 
                                NEG_training, 
@@ -767,7 +772,7 @@ def prediction_and_ploting_semi(Adata,#adata
                 pass
             
         if functionOption_boundary==2:
-            
+            #latent time boundary
             boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
             print('enter fixed time latent time groups for display:\n')
             try:
@@ -779,7 +784,9 @@ def prediction_and_ploting_semi(Adata,#adata
                 # if the input is not-integer, just print the list
             except:
                 print(boundaryC)
+            breakpoint()
             celltypeC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
+            breakpoint()
             print('enter cell types for display:\n')
             try:
                 celltypeC = []
@@ -1126,7 +1133,7 @@ def main():
     
     adata = anndata.read_h5ad(os.path.join('.', foldername, foldername+'.h5ad'))
     
-    resultfolder = "preservation_result"
+    resultfolder = "preservation_result"#"_refined_module"
     savedir = os.path.join(".", foldername, Clustermethod+"_cluster_")
     result_savedir = os.path.join(".", foldername, resultfolder, "")
     
@@ -1301,5 +1308,6 @@ def main():
             
             
         DEGinGroups.to_csv(os.path.join(result_savedir, "DEG_"+str(DEGnumbers)+"inGroups.csv"),sep='\t')
+        training_group_DF.to_csv(os.path.join(result_savedir, "training_group_DF.csv"))
 if __name__=="__main__":
     main()
