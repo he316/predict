@@ -548,10 +548,13 @@ def prediction_and_ploting(Adata,#adata
         neg_pcc_list = Dimensionality_reduction(pos_neg_cor[1])
         
         
-    jcounter=0
-    for listresult in neg_pcc_list:
-        if listresult == 1:
-            jcounter+=1
+        jcounter=0
+        for listresult in pos_pcc_list:
+            if listresult == 1:
+                jcounter+=1
+             
+        for i in range(jcounter):
+            pos_pcc_list.remove(1)
             
         jcounter=0
         for listresult in neg_pcc_list:
