@@ -367,7 +367,7 @@ def prediction_and_ploting(Adata,#adata
 
     POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)
     NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
-    if 1<0:
+    if 1>0:
         modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result','sorted_moduleGenesDFTab.csv'),sep='\t')#refined module
         #breakpoint()
         selected_modulegene=modulegene[str('cluster'+str(POS_cluster)+'_'+moduleColor)]
@@ -466,8 +466,12 @@ def prediction_and_ploting(Adata,#adata
             pass
         velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
                                    style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_boundary_annotated.png'))
+        boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
+        boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
+        _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
         try:
             g=plt.figure(figsize=(10,10),dpi=150)
+            plt.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
             g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
             plt.savefig(os.path.join(module_savedir, 'cell_type_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
             plt.close()
@@ -492,8 +496,11 @@ def prediction_and_ploting(Adata,#adata
             pass
         velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+        boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
+        _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
         try:
             g=plt.figure(figsize=(10,10),dpi=150)
+            plt.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
             g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
             plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
             plt.close()
@@ -516,8 +523,11 @@ def prediction_and_ploting(Adata,#adata
             pass
         velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+        boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
+        _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
         try:
             g=plt.figure(figsize=(10,10),dpi=150)
+            plt.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
             g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
             plt.savefig(os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
             plt.close()
@@ -854,10 +864,10 @@ def prediction_and_ploting_semi(Adata,#adata
             
             boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
             boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
-            _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided',axis=0, method='auto')
+            _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
             try:
                 g=plt.figure(figsize=(10,10),dpi=150)
-                g.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
+                plt.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=20)
                 g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
                 plt.savefig(os.path.join(module_savedir, 'cell_type_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
                 plt.close()
@@ -886,10 +896,10 @@ def prediction_and_ploting_semi(Adata,#adata
             
             boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
             boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
-            _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided',axis=0, method='auto')
+            _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
             try:
                 g=plt.figure(figsize=(10,10),dpi=150)
-                g.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
+                plt.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
                 g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
                 plt.savefig(os.path.join(module_savedir, 'all_cell_type_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
                 plt.close()
@@ -1211,7 +1221,7 @@ def main():
     
     adata = anndata.read_h5ad(os.path.join('.', foldername, foldername+'.h5ad'))
     
-    resultfolder = "preservation_result"#"_refined_module"
+    resultfolder = "preservation_result_refined_module"
     savedir = os.path.join(".", foldername, Clustermethod+"_cluster_")
     result_savedir = os.path.join(".", foldername, resultfolder, "")
     
