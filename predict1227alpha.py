@@ -336,8 +336,8 @@ def find_boundary_cluster(cell_UMAP_cluster,Predictlist,Cluster,column_name,save
     splot = sns.barplot(data=pltdata, x = column_name, y = 'positive_rate', ci = None)
     for p in splot.patches:
         splot.annotate(format(p.get_height(), '.2f'), (p.get_x() + p.get_width() / 2., p.get_height()), ha = 'center', va = 'center', xytext = (0, 10), textcoords = 'offset points')
-    plt.xlabel(column_name, size=14)
-    plt.ylabel("Positive_Rate", size=14)
+    plt.xlabel(column_name, size=30)
+    plt.ylabel("Positive_Rate", size=30)
     plt.savefig(save_name_barplot,bbox_inches='tight',               # 去除座標軸占用的空間
                 pad_inches=0.0)
     fig=plt.gcf()
@@ -368,7 +368,7 @@ def prediction_and_ploting(Adata,#adata
     POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)
     NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
     if 1<0:
-        modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result','sorted_moduleGenesDFTab.csv'),sep='\t')
+        modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result','sorted_moduleGenesDFTab.csv'),sep='\t')#refined module
         #breakpoint()
         selected_modulegene=modulegene[str('cluster'+str(POS_cluster)+'_'+moduleColor)]
         target_Module_genes=selected_modulegene[0:int(len(set(selected_modulegene))*0.1)]
@@ -417,7 +417,7 @@ def prediction_and_ploting(Adata,#adata
                                cell_UMAP_cluster,#細胞對應cluster
                                list(range(0,len(Module_cluster_Zscore.index))),#cluster列表 
                                list(Module_cluster_Zscore[moduleColor]), 
-                               str(moduleColor),
+                               'Cluster'+str(POS_cluster)+'_'+str(moduleColor),
                                os.path.join(module_savedir, moduleColor+'_PC'+str(POS_cluster)+'_NC'+str(NEG_cluster)+'.png'),
                                cell_leiden_cluster,
                                os.path.join(module_savedir, "barplot_of_pos_rate_on_leiden_res2.png")
@@ -448,76 +448,83 @@ def prediction_and_ploting(Adata,#adata
                 pad_inches=0.0)
     fig=plt.gcf()
     plt.close(fig)
-    boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_cell_type.png"))
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
-    boundaryCstr=[str(int) for int in boundaryC]
-    bdata=Adata.copy()
-    bdata=bdata[bdata.obs.cell_type.isin(boundaryC)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
     
-    try:
-        velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
-                                   style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'positive_UMAP_boundary_annotated.png'))
-    except:
-        pass
-    velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
-                               style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_boundary_annotated.png'))
-    try:
-        g=plt.figure(figsize=(10,10),dpi=150)
-        g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
-        plt.savefig(os.path.join(module_savedir, 'cell_type_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
-        plt.close()
-    except:
-        pass
-    #del(boundaryC,boundaryCstr,boundaryUMAP)
-    
-    boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
-    boundaryCstr=[str(int) for int in boundaryC]
-    bdata=Adata.copy()
-    bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryC)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
-    
-    try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
-                                   style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png'))
-    except:
-        pass
-    velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
-                               style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
-    try:
-        g=plt.figure(figsize=(10,10),dpi=150)
-        g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
-        plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
-        plt.close()
-    except:
-        pass
-    #del(boundaryC,boundaryCstr,boundaryUMAP)
-    
-    
-    boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_cell_number_latent_time_group'])),'fixed_cell_number_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_cell_number_latent_time_group.png"))
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryC)]
-    boundaryCstr=[str(int) for int in boundaryC]
-    bdata=Adata.copy()
-    bdata=bdata[bdata.obs.fixed_cell_number_latent_time_group.isin(boundaryC)]
-    boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryC)]
-    
-    try:
-        velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
-                                   style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_UMAP_boundary_annotated.png'))
-    except:
-        pass
-    velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
-                               style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
-    try:
-        g=plt.figure(figsize=(10,10),dpi=150)
-        g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
-        plt.savefig(os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
-        plt.close()
-    except:
-        pass
-    #del(boundaryC,boundaryCstr,boundaryUMAP)
-    #gc.collect()
+    if 1>0:
+        ##############################################################################################################################################
+        boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),
+                                        'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_cell_type.png"))
+        boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
+        boundaryCstr=[str(int) for int in boundaryC]
+        bdata=Adata.copy()
+        bdata=bdata[bdata.obs.cell_type.isin(boundaryC)]
+        boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
+        
+        try:
+            velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
+                                       style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'positive_UMAP_boundary_annotated.png'))
+        except:
+            pass
+        velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
+                                   style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_boundary_annotated.png'))
+        try:
+            g=plt.figure(figsize=(10,10),dpi=150)
+            g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+            plt.savefig(os.path.join(module_savedir, 'cell_type_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
+            plt.close()
+        except:
+            pass
+        #del(boundaryC,boundaryCstr,boundaryUMAP)
+        ##############################################################################################################################################
+        
+        
+        
+        boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
+        boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
+        boundaryCstr=[str(int) for int in boundaryC]
+        bdata=Adata.copy()
+        bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryC)]
+        boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
+        
+        try:
+            velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                       style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png'))
+        except:
+            pass
+        velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                   style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+        try:
+            g=plt.figure(figsize=(10,10),dpi=150)
+            g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+            plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
+            plt.close()
+        except:
+            pass
+        #del(boundaryC,boundaryCstr,boundaryUMAP)
+        ##############################################################################################################################################
+        
+        boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_cell_number_latent_time_group'])),'fixed_cell_number_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_cell_number_latent_time_group.png"))
+        boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryC)]
+        boundaryCstr=[str(int) for int in boundaryC]
+        bdata=Adata.copy()
+        bdata=bdata[bdata.obs.fixed_cell_number_latent_time_group.isin(boundaryC)]
+        boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_cell_number_latent_time_group.isin(boundaryC)]
+        
+        try:
+            velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                       style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_UMAP_boundary_annotated.png'))
+        except:
+            pass
+        velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
+                                   style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+        try:
+            g=plt.figure(figsize=(10,10),dpi=150)
+            g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+            plt.savefig(os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
+            plt.close()
+        except:
+            pass
+        #del(boundaryC,boundaryCstr,boundaryUMAP)
+        #gc.collect()
     
     #POS cluster module gene expression (hub gene) heatmap 
     #plt.figure(figsize=(10,10))
@@ -706,7 +713,7 @@ def prediction_and_ploting_semi(Adata,#adata
                                cell_UMAP_cluster,#細胞對應cluster
                                list(range(0,len(Module_cluster_Zscore.index))),#cluster列表 
                                list(Module_cluster_Zscore[moduleColor]), 
-                               str(moduleColor),
+                               'Cluster'+str(POS_cluster)+'_'+str(moduleColor),
                                os.path.join(module_savedir, moduleColor+'_PC'+str(POS_cluster)+'_NC'+str(NEG_cluster)+'.png'),
                                cell_leiden_cluster,
                                os.path.join(module_savedir, "barplot_of_pos_rate_on_leiden_res2.png")
@@ -740,9 +747,11 @@ def prediction_and_ploting_semi(Adata,#adata
     functionOption_boundary=''
     while functionOption_boundary!=0:
         functionOption_boundary=int(input('all cell type and certain latent time group activation scatterplot:1\n, '+
-                                      'certain cell type activation and latent time groups activation  scatterplot:2\n'+
+                                      'certain cell type activation and latent time groups activation scatterplot:2\n'+
+                                      'boundary cell type activation:3\n'+
+                                      'all cell activation violinplot:4\n'+
                                       'quit:0\n'))
-        if functionOption_boundary==1:            
+        if functionOption_boundary==1:            # specific latent time
             boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
             print('enter fixed time latent time groups for display:\n')
             try:
@@ -758,7 +767,11 @@ def prediction_and_ploting_semi(Adata,#adata
             boundaryCstr=[str(int) for int in boundaryC]
             bdata=Adata.copy()
             bdata=bdata[bdata.obs.fixed_time_latent_time_group.isin(boundaryC)]
-            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]    
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.fixed_time_latent_time_group.isin(boundaryC)]
+            #boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
+            #boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
+            breakpoint()#boundaryUMAP contains cell coordinates, latent time, cluster, prediction, so use it so test significance
+            
             try:
                 velocity_stream_scatterplt(adata=bdata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                            style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_UMAP_boundary_annotated.png'))
@@ -769,12 +782,12 @@ def prediction_and_ploting_semi(Adata,#adata
             try:
                 g=plt.figure(figsize=(10,10),dpi=150)
                 g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
-                plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
+                plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
                 plt.close()
             except:
                 pass
             
-        if functionOption_boundary==2:
+        if functionOption_boundary==2: # specific latent time in certain cell type
             #latent time boundary
             boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['fixed_time_latent_time_group'])),'fixed_time_latent_time_group',os.path.join(module_savedir, "barplot_of_pos_rate_on_fixed_time_latent_time_group.png"))
             print('enter fixed time latent time groups for display:\n')
@@ -817,10 +830,72 @@ def prediction_and_ploting_semi(Adata,#adata
             try:
                 g=plt.figure(figsize=(10,10),dpi=150)
                 g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
-                plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_boxplot.png'), bbox_inches='tight',pad_inches=0.0)
+                plt.savefig(os.path.join(module_savedir, 'fixed_time_latent_time_group_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
                 plt.close()
             except:
                 pass
+        
+        if functionOption_boundary==3:
+            boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),
+                                'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_cell_type.png"))
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
+            boundaryCstr=[str(int) for int in boundaryC]
+            bdata=Adata.copy()
+            bdata=bdata[bdata.obs.cell_type.isin(boundaryC)]
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
+            
+            try:
+                velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
+                                           style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'positive_UMAP_boundary_annotated.png'))
+            except:
+                pass
+            velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
+                                       style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_boundary_annotated.png'))
+            
+            boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
+            boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
+            _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided',axis=0, method='auto')
+            try:
+                g=plt.figure(figsize=(10,10),dpi=150)
+                g.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
+                g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+                plt.savefig(os.path.join(module_savedir, 'cell_type_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
+                plt.close()
+            except:
+                pass
+            
+        if functionOption_boundary==4:##latent time distribution in all cell
+            boundaryC=find_boundary_cluster(cell_UMAP_cluster, predict_list, list(set(cell_UMAP_cluster['cell_type'])),
+                                'cell_type',os.path.join(module_savedir, "barplot_of_pos_rate_on_cell_type.png"))
+            boundaryC=list(range(0,8))# all cell type 
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
+            boundaryCstr=[str(int) for int in boundaryC]
+            bdata=Adata.copy()
+            bdata=bdata[bdata.obs.cell_type.isin(boundaryC)]
+            boundaryUMAP=cell_UMAP_cluster[cell_UMAP_cluster.cell_type.isin(boundaryC)]
+            
+            try:
+                velocity_stream_scatterplt(adata=bdata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
+                                           style_order=[1,0],density=1,bbox_to_anchor_x=1.3,
+                                           savename=os.path.join(module_savedir, 'positive_UMAP_all_annotated.png'))
+            except:
+                pass
+            velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
+                                       style_order=[1,0],density=1,bbox_to_anchor_x=1.3,
+                                       savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_all_annotated.png'))
+            
+            boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
+            boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
+            _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided',axis=0, method='auto')
+            try:
+                g=plt.figure(figsize=(10,10),dpi=150)
+                g.title('U test of latent time distribution.\np-value: '+str(pValue)+'.',fontsize=16)
+                g=sns.violinplot(boundaryUMAP['prediction'],boundaryUMAP['latent_time'])
+                plt.savefig(os.path.join(module_savedir, 'all_cell_type_positive_violinplot.png'), bbox_inches='tight',pad_inches=0.0)
+                plt.close()
+            except:
+                pass
+        
     if 1>0:  #Draw heatmap
         ####whole module genes heatmap
         moduleGenePosHeatmap=sns.clustermap(data=(POS_training[target_Module_genes].T),xticklabels=False,yticklabels=True,
