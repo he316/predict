@@ -465,7 +465,7 @@ def prediction_and_ploting(Adata,#adata
         except:
             pass
         velocity_stream_scatterplt(adata=Adata, pltdata=boundaryUMAP, x='UMAP1', y='UMAP2', hue='latent_time', palette='turbo', style='prediction',
-                                   style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'global_stream_positive_UMAP_boundary_annotated.png'))
+                                   style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'cell_type_global_stream_positive_UMAP_boundary_annotated.png'))
         boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
         boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
         _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
@@ -496,6 +496,7 @@ def prediction_and_ploting(Adata,#adata
             pass
         velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_time_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+        boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
         boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
         _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
         try:
@@ -523,6 +524,7 @@ def prediction_and_ploting(Adata,#adata
             pass
         velocity_stream_scatterplt(adata=Adata,pltdata=boundaryUMAP,x='UMAP1',y='UMAP2',hue='latent_time',palette='turbo',
                                    style='prediction',style_order=[1,0],density=1,bbox_to_anchor_x=1.3,savename=os.path.join(module_savedir, 'fixed_cell_number_latent_time_group_global_stream_positive_UMAP_boundary_annotated.png'))
+        boundaryPredActvated=boundaryUMAP[boundaryUMAP.prediction.isin([1])]
         boundaryPredUnactvated=boundaryUMAP[boundaryUMAP.prediction.isin([0])]
         _,pValue=sc.mannwhitneyu(boundaryPredActvated['latent_time'], boundaryPredUnactvated['latent_time'],alternative='two-sided')
         try:
