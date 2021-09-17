@@ -367,7 +367,8 @@ def prediction_and_ploting(Adata,#adata
 
     POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)
     NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
-    if 1>0:
+    useRefineMG=False
+    if useRefineMG:
         modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result','sorted_moduleGenesDFTab.csv'),sep='\t')#refined module
         #breakpoint()
         selected_modulegene=modulegene[str('cluster'+str(POS_cluster)+'_'+moduleColor)]
@@ -1222,8 +1223,11 @@ def main():
     clustering = "cell_type"
     
     adata = anndata.read_h5ad(os.path.join('.', foldername, foldername+'.h5ad'))
-    
-    resultfolder = "preservation_result_refined_module"
+    useRefineMG=False
+    if useRefineMG:
+        resultfolder = "preservation_result_refined_module"
+    else:
+        resultfolder = "preservation_result"
     savedir = os.path.join(".", foldername, Clustermethod+"_cluster_")
     result_savedir = os.path.join(".", foldername, resultfolder, "")
     
