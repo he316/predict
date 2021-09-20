@@ -369,7 +369,7 @@ def prediction_and_ploting(Adata,#adata
     NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
     useRefineMG=False
     if useRefineMG:
-        modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result','sorted_moduleGenesDFTab.csv'),sep='\t')#refined module
+        modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result_refined_module','sorted_moduleGenesDFTab.csv'),sep='\t')#refined module
         #breakpoint()
         selected_modulegene=modulegene[str('cluster'+str(POS_cluster)+'_'+moduleColor)]
         target_Module_genes=selected_modulegene[0:int(len(set(selected_modulegene))*0.1)]
@@ -659,6 +659,7 @@ def prediction_and_ploting(Adata,#adata
         ACC_PCC=result['ACC_mean_std']
         ACC_PCC.append(result['PCC(positive_rate,preservation_Z_score)'])
     
+    cell_UMAP_cluster['P'+str(POS_cluster)+'N'+str(NEG_cluster)+'_'+moduleColor]=cell_UMAP_cluster['prediction']
     return ACC_PCC
 
 
@@ -1382,7 +1383,7 @@ def main():
             moduleGenesDF=pd.DataFrame(moduleGenes).T
             moduleGenesDF.columns=list(set(training_group_DF['moduleName']))
             moduleGenesDF.to_csv(os.path.join(result_savedir, "moduleGenesDF.csv"),sep='\t')
-            
+            cell_UMAP_cluster.to_csv(os.path.join(result_savedir, "predict_result.csv"),sep='\t')
             
         if functionOption==2:
             POS_cluster=int(input('POS: '))
