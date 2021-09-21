@@ -1243,9 +1243,9 @@ def compare():
         
         boundarrefinedActvated=imputerefinedResult[imputerefinedResult.prediction.isin([1])]
         #breakpoint()
-        latenttimeDist=pd.DataFrame(columns=['imputed','refined'])
-        latenttimeDist['imputed'] = boundarydActvated['latent_time']
-        latenttimeDist['refined'] = boundarrefinedActvated['latent_time']
+        latenttimeDist=pd.DataFrame(columns=['before_filtered','after_filtered'])
+        latenttimeDist['before_filtered'] = boundarydActvated['latent_time']
+        latenttimeDist['after_filtered'] = boundarrefinedActvated['latent_time']
         _,pValue=sc.mannwhitneyu(boundarydActvated['latent_time'], boundarrefinedActvated['latent_time'],alternative='two-sided')
         try:
             if pValue>=0.05:
@@ -1253,8 +1253,8 @@ def compare():
             else:
                 pFolder='lowP'
             g=plt.figure(figsize=(10,10),dpi=150)
-            plt.title('P'+str(POS_cluster)+'N'+str(NEG_cluster)+'_'+moduleColor+'\nU test of latent time distribution of activated cells in\n refined module and imputed module.\np-value: '+str(pValue)+'.',fontsize=16)
-            g=sns.violinplot(data=latenttimeDist[['imputed','refined']])
+            plt.title('P'+str(POS_cluster)+'N'+str(NEG_cluster)+'_'+moduleColor+'\nU test of latent time distribution of activated cells in\n before filtered module and after filtered module.\np-value: '+str(pValue)+'.',fontsize=16)
+            g=sns.violinplot(data=latenttimeDist[['before_filtered_module','after_filtered_module']])
             plt.savefig(os.path.join(module_savedir,pFolder,'P'+str(POS_cluster)+'N'+str(NEG_cluster)+'_'+moduleColor+'violinplot.png'), bbox_inches='tight',pad_inches=0.0)
             plt.close()
         except:
