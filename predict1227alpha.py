@@ -679,8 +679,8 @@ def prediction_and_ploting_semi(Adata,#adata
     Module_cluster_Zscore = pd.read_csv(os.path.join(savedir+str(POS_cluster), 'module_preservation_Zscore.csv'),index_col=0)
     Module_cluster_Zscore = Module_cluster_Zscore.drop(columns=['gold', 'grey'])
 
-    POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)
-    NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)
+    POS=pd.read_csv(savedir+str(POS_cluster)+'.csv',index_col=0)#POS cluster cell
+    NEG=pd.read_csv(savedir+str(NEG_cluster)+'.csv',index_col=0)#NEG cluster cell
 
     target_Module=pd.read_csv(os.path.join(savedir+str(POS_cluster), 'modules', moduleColor+'.csv'),index_col=0)
     target_Module_genes=list(target_Module.index)
@@ -1029,6 +1029,70 @@ def prediction_and_ploting_semi(Adata,#adata
     
     return ACC_PCC
 
+def drawcleargeneheatmap(Adata,#adata
+                           cell_data,#cell_data
+                           cell_UMAP_cluster,#cell_UMAP_cluster
+                           cell_leiden_cluster,#cell_leiden_cluster
+                           Clustermethod,#Clustermethod
+                           clustering,#clustering
+                           POS_cluster,#POS_cluster
+                           NEG_cluster,#NEG_cluster#module_savedir
+                           moduleColor,
+                           savedir,
+                           module_savedir):
+    foldername ="scv_pancreas_impute"## datafolder
+    resultfolder = "preservation_result"
+    refinedresultfolder = "preservation_result_refined_module"
+    compareresultfolder ="comparison"
+    Clustermethod = "celltype"
+    clustering = "cell_type"
+    
+    imputerefinedResult= pd.read_csv(os.path.join(".", foldername,refinedresultfolder,"predict_result.csv"),index_col=0,sep='\t')
+    
+    training_group_DF=pd.read_csv(os.path.join(".", foldername,refinedresultfolder,"training_group_DF.csv"))
+    
+    imputerefinedResult['prediction'] = imputerefinedResult['P'+str(POS_cluster)+'N'+str(NEG_cluster)+'_'+moduleColor]
+    useRefineMG=True
+    if useRefineMG:
+        modulegene=pd.read_csv(os.path.join('.','scv_pancreas_impute','preservation_result_refined_module','sorted_moduleGenesDFTab.csv'),sep='\t')#refined module
+        #breakpoint()
+        selected_modulegene=modulegene[str('cluster'+str(POS_cluster)+'_'+moduleColor)]
+        target_Module_genes=selected_modulegene[0:int(len(set(selected_modulegene))*0.1)]
+    else:
+        target_Module=pd.read_csv(os.path.join(savedir+str(POS_cluster), 'modules', moduleColor+'.csv'),index_col=0)
+        target_Module_genes=list(target_Module.index)
+    target_module_genes_set= set(target_Module_genes)
+    POS_training=cell_data[imputerefinedResult.prediction.isin([1])]
+    NEG_training=cell_data[imputerefinedResult.prediction.isin([0])]
+    
+    moduleGenePosHeatmap=sns.clustermap(data=(POS_training[target_Module_genes].T),xticklabels=False,yticklabels=True,
+           figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)),method='ward')
+    fixed_gene_list = list(moduleGenePosHeatmap.data2d.index)
+    
+    
+    POS_moduleGeneOrdered=POS_training[target_Module_genes]
+    POS_moduleGeneOrdered=POS_moduleGeneOrdered.reindex(columns=fixed_gene_list)
+    
+    plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)))
+    moduleGenePOSHeatmap=sns.heatmap(data=POS_moduleGeneOrdered.T,xticklabels=False,yticklabels="auto")
+    plt.savefig(os.path.join(module_savedir, 'inactivated_module_gene_heatmap.png'), bbox_inches='tight',pad_inches=0.0)    
+    fig=plt.gcf()
+    plt.close(fig)
+
+    
+    plt.savefig(os.path.join(module_savedir, 'activated_module_gene_heatmap.png'), bbox_inches='tight',pad_inches=0.0)
+    fig=plt.gcf()
+    plt.close(fig)    
+    NEG_moduleGeneOrdered=NEG_training[target_Module_genes]
+    NEG_moduleGeneOrdered=NEG_moduleGeneOrdered.reindex(columns=fixed_gene_list)
+    
+    plt.figure(figsize=((10+16*len(target_Module_genes)/40),(10+9*len(target_Module_genes)/30)))
+    moduleGeneNegHeatmap=sns.heatmap(data=NEG_moduleGeneOrdered.T,xticklabels=False,yticklabels="auto")
+    plt.savefig(os.path.join(module_savedir, 'inactivated_module_gene_heatmap.png'), bbox_inches='tight',pad_inches=0.0)    
+    fig=plt.gcf()
+    plt.close(fig)
+    
+    
     
 def predict_packagecopy2(module_gene_list, 
                          pos_sample, 
@@ -1276,7 +1340,7 @@ def main():
         clustering = "cell_type"
         
         adata = anndata.read_h5ad(os.path.join('.', foldername, foldername+'.h5ad'))
-        useRefineMG=False
+        useRefineMG=True
         if useRefineMG:
             resultfolder = "preservation_result_refined_module"
         else:
@@ -1453,7 +1517,21 @@ def main():
                                                             moduleColor=moduleColor,savedir=savedir,
                                                             module_savedir=module_savedir)
                 
-                
+            if functionOption==3:
+                POS_cluster=int(input('POS: '))
+                NEG_cluster=int(input('NEG: '))
+                moduleColor=str(input('moduleColor: '))
+                drawcleargeneheatmap(Adata=adata,
+                                    cell_data=cell_data,
+                                    cell_UMAP_cluster=cell_UMAP_cluster,
+                                    cell_leiden_cluster=cell_leiden_cluster,
+                                    Clustermethod=Clustermethod,
+                                    clustering=clustering,
+                                    POS_cluster=POS_cluster, NEG_cluster=NEG_cluster,
+                                    moduleColor=moduleColor,savedir=savedir,
+                                    module_savedir=module_savedir)
+            
+            
             DEGinGroups.to_csv(os.path.join(result_savedir, "DEG_"+str(DEGnumbers)+"inGroups.csv"),sep='\t')
             training_group_DF.to_csv(os.path.join(result_savedir, "training_group_DF.csv"))
 if __name__=="__main__":
